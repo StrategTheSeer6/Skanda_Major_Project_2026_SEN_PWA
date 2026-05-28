@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <title>PWA Basic UI</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #1a1a1a;
+    }
+
+    .app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #3d3f52;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  padding: 0;
+}
+
+/* how do i convert between rem and vh
+you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
+1rem 
+*/
+
+.header-bar-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  padding: 2rem 1rem 0 1rem;
+  position: relative;
+  z-index: 10;
+  transform: translateY(20vh);
+}
+
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 3rem;
+  background-color: #6a9c9e;
+  border-radius: 9999px;
+  border: 6px solid #3d3f52;
+  position: relative;
+}
+
+.header-text {
+  color: white;
+  font-style: italic;
+  font-family: Georgia, serif;
+  font-size: clamp(1.25rem, 4vw, 2rem);
+}
+
+.icon-circle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  border: 6px solid #3d3f52;
+  border-radius: 50%;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.content-container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: rgba(169, 178, 188, 0.85);
+  border: 8px solid #3d3f52;
+  border-radius: 3rem 3rem 0 0;
+  padding: 4rem 6rem 2rem 6rem;
+  margin-top: 12rem;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.content-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.text-content {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-container {
+  width: 200px;
+  flex-shrink: 0;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.side-image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.content-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-family: Georgia, serif;
+  color: #2d2f3f;
+  margin-bottom: 1rem;
+}
+
+.content-text {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-family: Georgia, serif;
+  color: #2d2f3f;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .header-bar {
+    padding: 1rem 2rem;
+  }
+
+  .header-bar-wrapper {
+    padding: 1rem 0.5rem 0 0.5rem;
+  }
+
+  .content-container {
+    padding: 3rem 2rem 1rem 2rem;
+  }
+
+  .content-inner {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .image-container {
+    width: 200vh;
+  }
+}
+    .min-h-screen {
+      min-height: 100vh;
+    }
+    .flex {
+      display: flex;
+    }
+    .items-center {
+      align-items: center;
+    }
+    .justify-center {
+      justify-content: center;
+    }
+    .p-4 {
+      padding: 1rem;
+    }
+    .relative {
+      position: relative;
+    }
+    .w-full {
+      width: 100%;
+    }
+    .max-w-6xl {
+      max-width: 72rem;
+    }
+    .rounded-3xl {
+      border-radius: 1.5rem;
+    }
+    .overflow-hidden {
+      overflow: hidden;
+    }
+    .opacity-40 {
+      opacity: 0.4;
+    }
+    .absolute {
+      position: absolute;
+    }
+    .inset-0 {
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+    }
+    .-z-10 {
+      z-index: -10;
+    }
+    .text-white {
+      color: white;
+    }
+    .text-center {
+      text-align: center;
+    }
+    .rounded-xl {
+      border-radius: 0.75rem;
+    }
+    .p-8 {
+      padding: 2rem;
+    }
+    .border {
+      border: 1px solid;
+    }
+    .shadow-2xl {
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .mt-6 {
+      margin-top: 1.5rem;
+    }
+    .p-6 {
+      padding: 1.5rem;
+    }
+    .rounded-lg {
+      border-radius: 0.5rem;
+    }
+    .mt-4 {
+      margin-top: 1rem;
+    }
+    .px-8 {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+    .py-3 {
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+    }
+    .bg-slate-700 {
+      background-color: #374151;
+    }
+    .hover\:bg-slate-600:hover {
+      background-color: #4b5563;
+    }
+    .transition-all {
+      transition: all 0.3s ease;
+    }
+    .duration-200 {
+      transition-duration: 200ms;
+    }
+    .border-slate-600 {
+      border-color: #4b5563;
+    }
+    .mt-8 {
+      margin-top: 2rem;
+    }
+    .px-6 {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+    .bg-slate-800 {
+      background-color: #1e293b;
+    }
+    .hover\:bg-slate-700:hover {
+      background-color: #374151;
+    }
+    .transition-colors {
+      transition: color 0.3s ease;
+    }
+    .text-white {
+      color: white;
+    }
+  </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a href="/"><div class="toolbar_button">Home</div></a>
+        <h1>Website Title!!</h1>
+        <a href="/login"><div class="toolbar_button" id="login_button">Log Out</div></a>
+        <div style="width: 10%;"></div>
+    </div>
+    
+    <div class="header-bar-wrapper" style="float: top; width: 100%; z-index: 1;">
+        .<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+        <div class="header-bar">
+            {% if isTestReal %}
+                <span class="header-text">Test</span>
+            {% else %}
+                <span class="header-text">Pre-Test</span>
+            {% endif %}
+          <span class="header-text">Question #</span>
+          <div class="icon-circle">
+            <div id="timer" class="layout-fixer" style="color: #1a1a1a; font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif">
+            0:30</div>
+          </div>
+      </div>
+      <br><br><br>
+  
+    <div class="min-h-screen w-full flex items-center justify-center p-4" style="background: #1a1a1a;" style="background-image: url('/static/swampbg.png'); background-size: cover; background-position: center; float: top;">
+    {% if isTestReal %}
+        <div class="relative w-full max-w-6xl" style="box-shadow: 0 0 120px 60px rgba(246, 59, 59, 0.5), inset 0 0 100px 40px rgba(246, 59, 59, 0.4); border: 2px solid rgba(246, 59, 59, 0.6); border-radius: 24px; padding: 60px; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%);" style="background-image: url('/static/swampbg.png'); background-size: cover;">
+    {% else %}
+        <div class="relative w-full max-w-6xl" style="box-shadow: 0 0 120px 60px rgba(59, 130, 246, 0.5), inset 0 0 100px 40px rgba(59, 130, 246, 0.4); border: 2px solid rgba(59, 130, 246, 0.6); border-radius: 24px; padding: 60px; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%);" style="background-image: url('/static/swampbg.png'); background-size: cover;">
+    {% endif %}
+    
+        <!-- Background Image -->
+      <div class="absolute inset-0 -z-10 rounded-3xl overflow-hidden opacity-40">
+        <img src="/static/swampbg.png" alt="Swamp background" class="w-full h-full object-cover">
+      </div>
+
+      <!-- If there is an associated image, this is where it goes -->
+      {% if associatedImage %}
+      <div class="flex justify-center items-end gap-12 mb-12">
+        <div class="w-48 h-48">
+          <img src="/static/swampbg.png" alt="Multiple Choice Robot" class="w-full h-full object-contain">
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Question Section -->
+      <div class="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-md rounded-2xl p-8 border border-slate-700/50 shadow-2xl">
+        <h2 class="mb-8 text-white text-center">Insert Question Here</h2>
+
+        <!-- Multiple Choice -->
+        <form id="testAnswer">
+            <input type="hidden" name="answer" id="answer"> 
+
+          <div class="grid grid-cols-2 gap-4">
+            <button type="submit" id="optionA" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+              <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">A</div>
+                <span class="flex-1 pt-1 text-white">Blatantly Wrong Option</span>
+              </div>
+            </button>
+            <button type="submit" id="optionB" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+                <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">B</div>
+                  <span class="flex-1 pt-1 text-white">Bad Grammar-y wording is</span>
+                </div>
+              </button>
+            <button type="submit" id="optionC" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+                <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">C</div>
+                  <span class="flex-1 pt-1 text-white">Always Right</span>
+                </div>
+              </button>
+            <button type="submit" id="optionD" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+                <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">D</div>
+                  <span class="flex-1 pt-1 text-white">Never Gonna Give You points for this</span>
+                </div>
+              </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Debug Toggle -->
+      <div class="mt-8 flex justify-center">
+        
+        {% if isTestReal %}
+        <button onclick="fetch('/practicetest').then(() => location.reload())" class="px-6 py-3 bg-slate-800/80 backdrop-blur-sm rounded-lg hover:bg-slate-700/80 transition-colors border border-slate-600 text-white">
+          Toggle Edge: Blue (Test Fake)
+        </button>
+        {% else %}
+        <button onclick="fetch('/realtest').then(() => location.reload())" class="px-6 py-3 bg-slate-800/80 backdrop-blur-sm rounded-lg hover:bg-slate-700/80 transition-colors border border-slate-600 text-white">
+            Toggle Edge: Red (Test Real)
+        </button>
+        <!--
+        -->
+
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
+<!-- 
+Issues:
+1. The original code uses JSX syntax (e.g., `className` instead of `class`) which is not valid in pure HTML.
+2. Dynamic behavior (e.g., `onClick`, `onSubmit`, `isTestReal`, `selectedAnswer`, etc.) relies on JavaScript logic that cannot be directly converted to HTML.
+3. Components like `ImageWithFallback` are React-specific and need to be replaced with standard HTML `<img>` tags.
+4. Conditional rendering and dynamic class names are not supported in plain HTML.
+5. The form functionality and interactivity are lost without JavaScript.
+--></img></div>

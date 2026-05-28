@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+
+    <title>PWA Basic UI</title>
+
+</head>
+<body>
+    <!-- This always appears at the top of every page. -->
+    <div class="toolbar">
+        <a href="/"><div class="toolbar_button">Home</div></a>
+        <h1>Website Title!!</h1>
+        <a href="/login"><div class="toolbar_button" id="login_button">Log In</div></a>
+        <div style="width: 10%;"></div>
+    </div>
+    
+    <div class="container">
+        <h1>Sign Up</h1>
+
+        {% if error %}
+        <div class="errorDialogue">
+          {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="/register" method="post">
+            <label for="email">Email: (must have @det.nsw.edu.au or @education.nsw.gov.au)</label><br>
+            <input type="text" id="email" name="email" pattern=^[a-zA-Z0-9._%+-]+@(education\.nsw\.gov\.au|det\.nsw\.edu\.au)$ required><br>
+            <!--the email only accepts inputs with @education.nsw.gov.au or @det.nsw.edu.au, and cannot contain whitespaces-->
+
+
+            <label for="username">Username: (Must not contain whitespaces)</label><br>
+            <input type="text" id="tbusername" name="username" required pattern=^\S+$><br>
+            <!--Username cannot have spaces-->
+            
+            <label for="password">Password: (Must be at least 8 characters long, contain at least 1 uppercase letter, 1 lowercase letter, 1 number and 1 special character)</label><br>
+            <input type="password" id="tbpassword" name="password" pattern=^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$ required><br><br>
+
+            <label for="confirm_password">Confirm Password:</label><br>
+            <input type="password" id="tbconfirm_password" name="confirm_password" pattern=^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$ required><br><br>
+            
+
+            
+            <label for="login">Already have an account? <a href="/login">Log In.</a></label><br><br>
+            
+            <input type="submit" value="register">
+        </form>
+    </div>
+
+</body>
+</html>

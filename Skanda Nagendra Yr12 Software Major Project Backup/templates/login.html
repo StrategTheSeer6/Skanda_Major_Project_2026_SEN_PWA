@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+
+
+    <title>PWA Basic UI</title>
+
+</head>
+<body>
+    <!-- This always appears at the top of every page. -->
+    <div class="toolbar">
+        <a href="/"><div class="toolbar_button">Home</div></a>
+        <h1>Website Title!!</h1>
+        <a href="/login"><div class="toolbar_button" id="login_button">Log In</div></a>
+        <div style="width: 10%;"></div>
+    </div>
+    
+    <div class="container">
+        <h1>Login</h1>
+
+        {% if error %}
+        <div class="errorDialogue">
+          {{ error }}
+        </div>
+        {% endif %}
+
+
+        {% if loginTimeout and loginTimeout > 0 %}
+        <div class="errorDialogue">
+            Too many failed login attempts. Please wait {{ loginTimeout }} seconds before trying again.
+        </div>
+
+        {% else %}
+
+        <form action="/login" method="post" incorrectAttempts = "{{ incorrectAttempts }}">
+
+            <label for="username">Username:</label><br>
+            <input type="text" id="username" name="username"><br>
+            <label for="password">Password:</label><br>
+            <input type="password" id="password" name="password"><br><br>
+            <label for="signup">Don't have an account? <a href="/register">Sign Up.</a></label><br><br>
+            <input type="submit" value="Login">
+        </form>
+
+        {% endif %}
+
+
+    </div>
+
+</body>
+</html>

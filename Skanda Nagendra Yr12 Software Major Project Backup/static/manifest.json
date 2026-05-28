@@ -1,0 +1,16 @@
+{
+"name": "Software Engineering Quiz PWA",
+"short_name": "SEN PWA",
+"description": "My SEN Progressive Web App with SQLite",
+"start_url": "/",
+"display": "standalone",
+"background_color": "#ffffff",
+"theme_color": "#2196F3",
+"icons": [
+{
+"src": "icons/icon-192.png",
+"sizes": "192x192",
+"type": "image/png"
+}
+]
+}
