@@ -28,9 +28,7 @@
   padding: 0;
 }
 
-/* how do i convert between rem and vh
-you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
-1rem 
+/* to convert between rem and vh, the formula is 1rem = (viewport height in pixels) * (rem value / 100)
 */
 
 .header-bar-wrapper {
@@ -65,10 +63,12 @@ you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
+  height: 3vh;
+  width: 3vh;
   background-color: white;
-  border: 6px solid #3d3f52;
-  border-radius: 50%;
-  padding: 1rem;
+  border: 1vh solid #3d3f52;
+  border-radius: 100%;
+  padding: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -277,14 +277,14 @@ you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
 </head>
 <body>
     <div class="toolbar">
-        <a href="/"><div class="toolbar_button">Home</div></a>
+        <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
         <h1>Website Title!!</h1>
-        <a href="/login"><div class="toolbar_button" id="login_button">Log Out</div></a>
+        <a href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
         <div style="width: 10%;"></div>
     </div>
     
     <div class="header-bar-wrapper" style="float: top; width: 100%; z-index: 1;">
-        .<br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br><br>
+        .<br><br><br><br><br><br><br><br><br><br><br>
         <div class="header-bar">
             {% if isTestReal %}
                 <span class="header-text">Test</span>
@@ -293,11 +293,17 @@ you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
             {% endif %}
           <span class="header-text">Question #</span>
           <div class="icon-circle">
-            <div id="timer" class="layout-fixer" style="color: #1a1a1a; font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif">
-            0:30</div>
+            <div id="timer" class="layout-fixer" style="color: #1a1a1a; font-size: 3vh; font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif">
+            
+              {% if timer %}
+              {{ timer }}
+              {% else %}
+              0:30
+              {% endif %}
+            
+            </div>
           </div>
       </div>
-      <br><br><br>
   
     <div class="min-h-screen w-full flex items-center justify-center p-4" style="background: #1a1a1a;" style="background-image: url('/static/swampbg.png'); background-size: cover; background-position: center; float: top;">
     {% if isTestReal %}
@@ -312,7 +318,7 @@ you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
       </div>
 
       <!-- If there is an associated image, this is where it goes -->
-      {% if associatedImage %}
+      {% if not associatedImage %}
       <div class="flex justify-center items-end gap-12 mb-12">
         <div class="w-48 h-48">
           <img src="/static/swampbg.png" alt="Multiple Choice Robot" class="w-full h-full object-contain">
@@ -325,36 +331,46 @@ you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
         <h2 class="mb-8 text-white text-center">Insert Question Here</h2>
 
         <!-- Multiple Choice -->
-        <form id="testAnswer">
+        <form action='/testanswer' method="post">
+          <!-- it says method not allowed for the requested URL, even though there is a route for the '/testanswer' URL in app.py, and an if request.method == 'POST' in it
+            why? it is because 
+          -->
             <input type="hidden" name="answer" id="answer"> 
 
           <div class="grid grid-cols-2 gap-4">
-            <button type="submit" id="optionA" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+            <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
               <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">A</div>
-                <span class="flex-1 pt-1 text-white">Blatantly Wrong Option</span>
+                <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>A</strong></div>
+                <span id="optionA" class="flex-1 pt-1 text-white">Blatantly Wrong Option</span>
               </div>
             </button>
-            <button type="submit" id="optionB" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-                <div class="flex items-start gap-4">
-                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">B</div>
-                  <span class="flex-1 pt-1 text-white">Bad Grammar-y wording is</span>
+            <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionB').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+              <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>B</strong></div>
+                  <span  id="optionB"  class="flex-1 pt-1 text-white">Bad Grammar-y wording is</span>
                 </div>
               </button>
-            <button type="submit" id="optionC" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-                <div class="flex items-start gap-4">
-                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">C</div>
-                  <span class="flex-1 pt-1 text-white">Always Right</span>
+            <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionC').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+              <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>C</strong></div>
+                  <span  id="optionC" class="flex-1 pt-1 text-white">Always Right</span>
                 </div>
               </button>
-            <button type="submit" id="optionD" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-                <div class="flex items-start gap-4">
-                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50">D</div>
-                  <span class="flex-1 pt-1 text-white">Never Gonna Give You points for this</span>
+            <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionD').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
+              <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>D</strong></div>
+                  <span id="optionD" class="flex-1 pt-1 text-white">Never Gonna Give You points for this</span>
                 </div>
               </button>
           </div>
         </form>
+
+
+
+
+
+
+
       </div>
 
       <!-- Debug Toggle -->
@@ -368,21 +384,19 @@ you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
         <button onclick="fetch('/realtest').then(() => location.reload())" class="px-6 py-3 bg-slate-800/80 backdrop-blur-sm rounded-lg hover:bg-slate-700/80 transition-colors border border-slate-600 text-white">
             Toggle Edge: Red (Test Real)
         </button>
-        <!--
+        <!-- 
         -->
 
         {% endif %}
+        
+      <div class="content-container" style="position: fixed; bottom: 0; right: 0; width: auto; height: 10px; float: right; background-color: #ffffff; padding: 1%; border-radius: 3rem 3rem 3rem 3rem;">
+        <img src="/static/botmultichoice.png" alt="Bot" class="w-full h-full object-contain" style="min-width: 10vh; min-height: none;">
+      </div>
+
+
+
       </div>
     </div>
   </div>
 </body>
 </html>
-
-<!-- 
-Issues:
-1. The original code uses JSX syntax (e.g., `className` instead of `class`) which is not valid in pure HTML.
-2. Dynamic behavior (e.g., `onClick`, `onSubmit`, `isTestReal`, `selectedAnswer`, etc.) relies on JavaScript logic that cannot be directly converted to HTML.
-3. Components like `ImageWithFallback` are React-specific and need to be replaced with standard HTML `<img>` tags.
-4. Conditional rendering and dynamic class names are not supported in plain HTML.
-5. The form functionality and interactivity are lost without JavaScript.
---></img></div>
