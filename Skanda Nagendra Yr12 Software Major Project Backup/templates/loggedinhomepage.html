@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    
+    <title>SEN - Home</title>
+</head>
+<body>
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
+        <div id="toolbar_header">
+            <h1>Website Title!!</h1>
+        </div>
+        <a id="login_button_link" href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
+        <div style="width: 0%;"></div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="container" style="width: 100%; background-size: cover;">
+        <h1>Welcome I guess</h1>
+        <p>There is not much done... I don't know what to do...</p>
+        <button onclick="alert('Nothing happened...')">Click for nothing to happen</button>
+        <a href="/preparation"><button>Click for nothing to happen</button></a>
+    </div>
+
+    <!-- Navigation Menu -->
+    <div class="container" style="width: 100%; background-size: cover;">
+        <h2>Navigation Menu</h2>
+        <label for="modules">Select a Module/Test/Course:</label>
+        <select id="modules" onchange="navigateToPreparationPage()">
+            <option value="" disabled selected>Select an option</option>
+            <option value="sd_phases">SD Phases</option>
+            <option value="algorithmic_thinking">Algorithmic Thinking</option>
+        </select>
+    </div>
+
+    <!-- Assigned Items -->
+    <div class="container" style="width: 100%; background-size: cover;">
+        <h2>Assigned Items</h2>
+        <div class="assigned-item">
+            <p>Assignment 1: SD Phases</p>
+            <a href="/preparation"><button>Go to Preparation</button></a>
+        </div>
+        <div class="assigned-item">
+            <p>Assignment 2: Algorithmic Thinking</p>
+            <a href="/preparation"><button>Go to Preparation</button></a>
+        </div>
+    </div>
+
+    <script>
+        function navigateToPreparationPage() {
+            const dropdown = document.getElementById('modules');
+            const selectedValue = dropdown.value;
+            if (selectedValue) {
+                window.location.href = '/preparation'; // Adjust this URL as needed
+            }
+        }
+    </script>
+</body>
+</html>
