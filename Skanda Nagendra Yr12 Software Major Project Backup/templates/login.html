@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
 
 
-    <title>PWA Basic UI</title>
+    <title>SEN - Log In</title>
 
 </head>
 <body>
@@ -35,6 +35,27 @@
         {% if loginTimeout and loginTimeout > 0 %}
         <div class="errorDialogue">
             Too many failed login attempts. Please wait {{ loginTimeout }} seconds before trying again.
+        </div>
+
+        {% else %}
+
+        <form action="/login" method="post" incorrectAttempts = "{{ incorrectAttempts }}">
+
+            <label for="username">Username:</label><br>
+            <input type="text" id="username" name="username"><br>
+            <label for="password">Password:</label><br>
+            <input type="password" id="password" name="password"><br><br>
+            <label for="signup">Don't have an account? <a href="/register">Sign Up.</a></label><br><br>
+            <input type="submit" value="Login">
+        </form>
+
+        {% endif %}
+
+
+    </div>
+
+</body>
+</html>            Too many failed login attempts. Please wait {{ loginTimeout }} seconds before trying again.
         </div>
 
         {% else %}
