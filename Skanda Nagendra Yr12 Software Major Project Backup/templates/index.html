@@ -9,32 +9,36 @@
     <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     
-    <title>PWA Basic UI</title>
+    <title>Welcome to SEN!</title>
     <!--the above code not set an icon for this page in particular even though it is the same code for every page-->
-    <script>
-    var loggedIn = false; // Default value
-    // to avoid making this become false every time the page is refreshed, localStorage is used
-    localStorage.setItem('loggedIn', localStorage.getItem('loggedIn') || loggedIn);
-    </script>
 </head>
 <body>
     <!-- This always appears at the top of every page. -->
     <div class="toolbar">
         <a href="/"><div class="toolbar_button">Home</div></a>
+        <div id="toolbar_header">
         <h1>Website Title!!</h1>
-        <a id="login_button_link" href="/login"><div class="toolbar_button" id="login_button"></div></a>
+        </div>
+        <a id="login_button_link" href="/login"><div class="toolbar_button" id="login_button">Log In</div></a>
         <div style="width: 0%;"></div>
 
-        <script>
 
-            if (loggedIn) {
-                document.getElementById('login_button').textContent = "Log Out";
-                document.getElementById('login_button_link').href = "/logout";
-                //this should log the user out and redirect to the home page, but the backend is not done yet...
-                document.getElementById('login_button').href = "/logout";
-            } else {
-                document.getElementById('login_button').textContent = "Log In";
-                document.getElementById('login_button').href = "/login";
+        
+
+
+
+    </div>
+    
+    <div class="container" style="background-image: 'static/swampbg.png';">
+        <h1>Welcome I guess</h1>
+        <p>There is not much done... I don't know what to do...</p>
+        <button onclick="alert('Nothing happened...')">Click for nothing to happen</button>
+        <a href="/preparation"><button>Click for nothing to happen</button></a>
+    </div>
+
+</body>
+</html>
+<!---->                document.getElementById('login_button').href = "/login";
             }
 
         </script>
