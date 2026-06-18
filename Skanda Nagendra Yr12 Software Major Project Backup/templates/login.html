@@ -37,6 +37,45 @@
             Too many failed login attempts. Please wait {{ loginTimeout }} seconds before trying again.
         </div>
 
+        <script>
+            let remainingTime = {{ loginTimeout }};
+            const timerElement = document.querySelector('.errorDialogue');
+            const interval = setInterval(() => {
+                remainingTime--;
+                if (remainingTime <= 0) {
+                    clearInterval(interval);
+                    location.reload();
+                } else {
+                    timerElement.textContent = `Too many failed login attempts. Please wait ${remainingTime} seconds before trying again.`;
+                }
+            }, 1000);
+            // although there may be a red squiggly line under the {{ loginTimeout }} in the code,
+            // it will still work as Flask replaces that with the actual value when rendering the template.
+        </script> 
+        
+
+
+        {% else %}
+
+        <form action="/login" method="post">
+
+            <label for="username">Username:</label><br>
+            <input type="text" id="username" name="username"><br>
+            <label for="password">Password:</label><br>
+            <input type="password" id="password" name="password"><br><br>
+            <label for="signup">Don't have an account? <a href="/register">Sign Up.</a></label><br><br>
+            <input type="submit" value="Login">
+        </form>
+
+        {% endif %}
+
+
+    </div>
+
+</body>
+</html>            Too many failed login attempts. Please wait {{ loginTimeout }} seconds before trying again.
+        </div>
+
         {% else %}
 
         <form action="/login" method="post" incorrectAttempts = "{{ incorrectAttempts }}">
