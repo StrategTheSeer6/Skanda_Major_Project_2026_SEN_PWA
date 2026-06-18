@@ -22,41 +22,18 @@
         <a id="login_button_link" href="/login"><div class="toolbar_button" id="login_button">Log In</div></a>
         <div style="width: 0%;"></div>
 
-
-        
-
-
-
     </div>
     
     <div class="container" style="background-image: 'static/swampbg.png';">
+        {% if error %}
+        {{ error }}
+        <br><br><br>
+        {% endif %}
         <h1>Welcome I guess</h1>
         <p>There is not much done... I don't know what to do...</p>
         <button onclick="alert('Nothing happened...')">Click for nothing to happen</button>
-        <a href="/preparation"><button>Click for nothing to happen</button></a>
+        <a href="/preparation"><button>Click for something to happen</button></a>
     </div>
 
 </body>
 </html>
-<!---->                document.getElementById('login_button').href = "/login";
-            }
-
-        </script>
-
-
-        
-
-
-
-    </div>
-    
-    <div class="container" style="background-image: 'static/swampbg.png';">
-        <h1>Welcome I guess</h1>
-        <p>There is not much done... I don't know what to do...</p>
-        <button onclick="alert('Nothing happened...')">Click for nothing to happen</button>
-        <a href="/preparation"><button>Click for nothing to happen</button></a>
-    </div>
-
-</body>
-</html>
-<!---->
