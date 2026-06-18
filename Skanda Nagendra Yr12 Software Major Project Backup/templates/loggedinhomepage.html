@@ -71,34 +71,4 @@
     </script>
     </div>
 </body>
-</html>        <select id="modules" onchange="navigateToPreparationPage()">
-            <option value="" disabled selected>Select an option</option>
-            <option value="sd_phases">SD Phases</option>
-            <option value="algorithmic_thinking">Algorithmic Thinking</option>
-        </select>
-    </div>
-
-    <!-- Assigned Items -->
-    <div class="container" style="width: 100%; background-size: cover;">
-        <h2>Assigned Items</h2>
-        <div class="assigned-item">
-            <p>Assignment 1: SD Phases</p>
-            <a href="/preparation"><button>Go to Preparation</button></a>
-        </div>
-        <div class="assigned-item">
-            <p>Assignment 2: Algorithmic Thinking</p>
-            <a href="/preparation"><button>Go to Preparation</button></a>
-        </div>
-    </div>
-
-    <script>
-        function navigateToPreparationPage() {
-            const dropdown = document.getElementById('modules');
-            const selectedValue = dropdown.value;
-            if (selectedValue) {
-                window.location.href = '/preparation'; // Adjust this URL as needed
-            }
-        }
-    </script>
-</body>
 </html>
