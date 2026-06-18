@@ -23,8 +23,18 @@
 
     <div class="container">
         <h1>Do you feel prepared (trademark)?</h1>
-        <p>There is not much done... I don't know what to do...</p>
-        <a href="/signpage"><button>Click for something to happen</button></a>
+        <p>
+            {% if subtopic %}
+            You are about to start a test on {{ subtopic }}
+            {% else %}
+            There is not much done... I don't know what to do... Demo Test for you!
+            {% endif %}
+        </p>
+        <form action="/start_test" method="post">
+            <input type="hidden" id="subtopic" name="subtopic" value="sd phases">
+            <button type="submit">Click to happen</button>
+        </form>
+
     </div>
 
 </body>
