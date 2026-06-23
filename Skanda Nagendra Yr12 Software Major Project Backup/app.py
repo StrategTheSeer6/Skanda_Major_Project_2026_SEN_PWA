@@ -4,6 +4,7 @@ import bcrypt
 import datetime
 import sqlite3
 import random
+import string
 from git import Repo
 
 
@@ -13,6 +14,7 @@ app = Flask(__name__)
 app.secret_key = 'sen_secret_key' #os.environ['SECRET_KEY']
 
 DB_PATH = "users.db"
+COURSE_SUBTOPICS = ["sd phases", "datatypes", "errors", "algorithmic thinking", "debugging"]
 
 
 def auto_github_commit(repo_path, commit_message):
@@ -37,6 +39,24 @@ def auto_github_commit(repo_path, commit_message):
 #makes the database
 def get_db():
     return sqlite3.connect(DB_PATH)
+def column_exists(cursor, table, column):
+    return column in [row[1] for row in cursor.execute(f'PRAGMA table_info({table})').fetchall()]
+def add_column_if_missing(cursor, table, column, definition):
+    if not column_exists(cursor, table, column):
+        cursor.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+def generate_unique_teacher_code(cursor):
+    alphabet = string.ascii_uppercase + string.digits
+    while True:
+        code = "T-" + "".join(random.choice(alphabet) for _ in range(6))
+        if not cursor.execute('SELECT id FROM User WHERE selfcode = ?', (code,)).fetchone():
+            return code
+def ensure_teacher_selfcodes(cursor):
+    teachers_without_codes = cursor.execute(
+        'SELECT id FROM User WHERE accesslevel = "teacher" AND (selfcode IS NULL OR selfcode = "")'
+    ).fetchall()
+    for teacher in teachers_without_codes:
+        cursor.execute('UPDATE User SET selfcode = ? WHERE id = ?', (generate_unique_teacher_code(cursor), teacher[0]))
+
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
@@ -48,13 +68,13 @@ def init_db():
             password TEXT NOT NULL,
             email TEXT NOT NULL UNIQUE,
             accesslevel TEXT NOT NULL DEFAULT 'student',
-            teacherid INTEGER,
-            assignedcourses TEXT,
-
-            FOREIGN KEY (teacherid) REFERENCES User(id)
+            teachercode TEXT,
+            selfcode TEXT UNIQUE
 
         )
     ''')
+    add_column_if_missing(cursor, 'User', 'teachercode', 'TEXT')
+    add_column_if_missing(cursor, 'User', 'selfcode', 'TEXT')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Question (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,9 +117,11 @@ def init_db():
             teacherid INTEGER,
             quiznumber INTEGER,
             score INTEGER,
-            totalmarks INTEGER
+            totalmarks INTEGER,
+            subtopic TEXT
         )
     ''')
+    add_column_if_missing(cursor, 'Marks', 'subtopic', 'TEXT')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS Signs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,9 +131,44 @@ def init_db():
             
         )                          
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS AssignedCourses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id INTEGER NOT NULL,
+            subtopic TEXT NOT NULL,
+            assigned_by INTEGER,
+            assigned_at TEXT,
+            UNIQUE(student_id, subtopic),
+            FOREIGN KEY (student_id) REFERENCES User(id),
+            FOREIGN KEY (assigned_by) REFERENCES User(id)
+        )
+    ''')
     #signtitles are unique
 
 
+    if column_exists(cursor, 'User', 'teacherid'):
+        rows_to_migrate = cursor.execute('''
+            SELECT student.id, teacher.selfcode
+            FROM User AS student
+            JOIN User AS teacher ON student.teacherid = teacher.id
+            WHERE student.teachercode IS NULL OR student.teachercode = ""
+        ''').fetchall()
+        for student_id, teacher_code in rows_to_migrate:
+            if teacher_code:
+                cursor.execute('UPDATE User SET teachercode = ? WHERE id = ?', (teacher_code, student_id))
+
+    if column_exists(cursor, 'User', 'assignedcourses'):
+        assigned_rows = cursor.execute('SELECT id, assignedcourses FROM User WHERE assignedcourses IS NOT NULL AND assignedcourses != ""').fetchall()
+        for student_id, assignedcourses in assigned_rows:
+            for course in assignedcourses.split(','):
+                course = course.strip()
+                if course:
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO AssignedCourses (student_id, subtopic, assigned_at)
+                        VALUES (?, ?, ?)
+                    ''', (student_id, course, datetime.datetime.now(tz=utc_plus_10).isoformat()))
+
+    ensure_teacher_selfcodes(cursor)
 
     conn.commit()
     conn.close()
@@ -122,24 +179,29 @@ def purge_db():
     cursor.execute('DROP TABLE IF EXISTS Question')
     cursor.execute('DROP TABLE IF EXISTS Marks')
     cursor.execute('DROP TABLE IF EXISTS Signs')
+    cursor.execute('DROP TABLE IF EXISTS QuizResult')
+    cursor.execute('DROP TABLE IF EXISTS AssignedCourses')
     conn.commit()
     conn.close()
 def createDummyUser():
     conn = get_db()
     cursor = conn.cursor()
     dummy_password = bcrypt.hashpw("examplepassword123!".encode(), bcrypt.gensalt()).decode()
-    data = ("exampleuser1", dummy_password, "example.user@det.nsw.edu.au", "teacher")
+    teacher1code = generate_unique_teacher_code(cursor)
+    data1 = ("exampleuser1", dummy_password, "example.user@det.nsw.edu.au", "teacher", teacher1code)
+    data2 = ("exampleuser2", dummy_password, "example.user2@education.nsw.gov.au", "student", teacher1code)
     try:
-        existingid = cursor.execute('SELECT id FROM User WHERE email = ?', (data[2],)).fetchone()
+        existingid = cursor.execute('SELECT id FROM User WHERE email = ?', (data1[2],)).fetchone()
         if existingid:
+            ensure_teacher_selfcodes(cursor)
             print("Dummy user already exists, no need to create.")
             return
         else:
-            cursor.execute('INSERT INTO User(username, password, email, accesslevel) VALUES (?, ?, ?, ?)', data)
+            cursor.execute('INSERT INTO User(username, password, email, accesslevel, selfcode) VALUES (?, ?, ?, ?, ?)', data1)
+            cursor.execute('INSERT INTO User(username, password, email, accesslevel, teachercode) VALUES (?, ?, ?, ?, ?)', data2)
             return
     except sqlite3.Error as e:
-        print(f"Database error {e}")
-        cursor.execute('INSERT INTO User(username, password, email, accesslevel) VALUES (?, ?, ?, ?)', data)
+        print(f"Database error {e}. Could not add dummy users.")
     finally:
         conn.commit()
         conn.close()
@@ -246,14 +308,14 @@ def generate_question_parameter(whatAreaWordIsWantedFrom, wordWantedFromDictiona
     #whatAreaWordIsWantedFrom refers to what is actually wanted
     #wordWantedFromDictionary only applies to the dictionaries where a specific key is needed.
     #specificIndex only applies to the lists where a specific index is needed. If it is not provided, a random item is returned.
-    global subtopics, senPhases, eg_things_done_in_sen_phases, egstrings, glossaryTerms, examplesOfTerms
+    global COURSE_SUBTOPICS, senPhases, eg_things_done_in_sen_phases, egstrings, glossaryTerms, examplesOfTerms
 
 
     #example integers and decimals are randomised using the random module
     if whatAreaWordIsWantedFrom == "subtopic":
-        if specificIndex is not None and 0 <= specificIndex < len(subtopics):
-            return subtopics[specificIndex]
-        return random.choice(subtopics)
+        if specificIndex is not None and 0 <= specificIndex < len(COURSE_SUBTOPICS):
+            return COURSE_SUBTOPICS[specificIndex]
+        return random.choice(COURSE_SUBTOPICS)
     elif whatAreaWordIsWantedFrom == "sen phase":
         if specificIndex is not None and 0 <= specificIndex < len(senPhases):
             return senPhases[specificIndex]
@@ -289,9 +351,6 @@ def generate_question_parameter(whatAreaWordIsWantedFrom, wordWantedFromDictiona
     else:
         raise ValueError(f"Invalid area requested: {whatAreaWordIsWantedFrom}")
 
-    
-# random.shuffle can be used to shuffle the data when posting the questions
-
 def init_questions():
     conn = get_db()
     cursor = conn.cursor()
@@ -309,9 +368,39 @@ def init_questions():
         #if something requires a string within it, wherever that string goes will be represented by "\\randomstring\\", and that will be replaced by a random string from egstrings in generate_question_parameters.
         #if there is to be a new line, it will be represented by \n.
         #if the output needs to be remotely calculated, the qcorrectanswer and item1 fields will be left as None.
-        #the different subtopics are as follows: "sd phases", "algorithmic thinking", "datatypes", "errors", "debugging"
+        #the different subtopics for the sen thunder mantles (fundamentals) are as follows: "sd phases", "algorithmic thinking", "datatypes", "errors", "debugging"
 
         fourOptionsQuestions = [
+            #phases but they are demo questions only.
+            {
+                "subtopic": "demo",
+                "qinfotext": "",
+                "qquestiontext": "Which phase comes after the \\randomsenphase\\ phase?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "",
+                "item1": "",
+                "item2": "\\randomsenphase\\",
+                "item3": "\\randomsenphase\\",
+                "item4": "\\randomsenphase\\",
+                "qanswerspecialmethod": "findnextphase",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "demo",
+                "qinfotext": "",
+                "qquestiontext": "Which phase comes before the \\randomsenphase\\ phase?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "",
+                "item1": "",
+                "item2": "\\randomsenphase\\",
+                "item3": "\\randomsenphase\\",
+                "item4": "\\randomsenphase\\",
+                "qanswerspecialmethod": "findpreviousphase",
+                "difficulty": 2
+            },
+
 
             #phases
             {
@@ -345,7 +434,7 @@ def init_questions():
 
             #datatypes
             {
-                "subtopic": "understanding datatypes",
+                "subtopic": "datatypes",
                 "qinfotext": "",
                 "qquestiontext": "What datatype is \\randomstring\\?",
                 "qassociatedimage": "",
@@ -359,7 +448,7 @@ def init_questions():
                 "difficulty": 2
             },
             {
-                "subtopic": "understanding datatypes",
+                "subtopic": "datatypes",
                 "qinfotext": "",
                 "qquestiontext": "What datatype is \\randominteger\\?",
                 "qassociatedimage": "",
@@ -373,7 +462,7 @@ def init_questions():
                 "difficulty": 2
             },
             {
-                "subtopic": "understanding datatypes",
+                "subtopic": "datatypes",
                 "qinfotext": "",
                 "qquestiontext": "What datatype is \\randomfloat\\?",
                 "qassociatedimage": "",
@@ -387,7 +476,7 @@ def init_questions():
                 "difficulty": 2
             },
             {
-                "subtopic": "understanding datatypes",
+                "subtopic": "datatypes",
                 "qinfotext": "",
                 "qquestiontext": "What datatype is \\randomboolean\\?",
                 "qassociatedimage": "",
@@ -477,6 +566,720 @@ def init_questions():
 
         ]
 
+        additionalQuestions = [ #arranged by subtopic
+            #sd phases
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase focuses on gathering user needs and documenting what the system must do?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "requirements",
+                "item1": "requirements",
+                "item2": "development",
+                "item3": "installation",
+                "item4": "maintenance",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase turns broad requirements into detailed measurable specifications?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "specifications",
+                "item1": "specifications",
+                "item2": "testing & debugging",
+                "item3": "integration",
+                "item4": "maintenance",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase involves creating algorithms, flowcharts and user interface plans before coding?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "design",
+                "item1": "design",
+                "item2": "installation",
+                "item3": "requirements",
+                "item4": "integration",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase is mainly concerned with writing the software code?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "development",
+                "item1": "development",
+                "item2": "requirements",
+                "item3": "maintenance",
+                "item4": "specifications",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase combines separately developed modules into a complete system?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "integration",
+                "item1": "integration",
+                "item2": "design",
+                "item3": "installation",
+                "item4": "requirements",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase checks the software against requirements and locates errors?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "testing & debugging",
+                "item1": "testing & debugging",
+                "item2": "development",
+                "item3": "specifications",
+                "item4": "installation",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase deploys the finished software into the user's working environment?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "installation",
+                "item1": "installation",
+                "item2": "requirements",
+                "item3": "design",
+                "item4": "testing & debugging",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "Which SDLC phase continues after deployment to fix issues and add improvements?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "maintenance",
+                "item1": "maintenance",
+                "item2": "requirements",
+                "item3": "integration",
+                "item4": "development",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "What is a functional requirement?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "A statement of what the system must do",
+                "item1": "A statement of what the system must do",
+                "item2": "A rule about the programming language syntax",
+                "item3": "A description of the company budget only",
+                "item4": "A list of unrelated test data",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "sd phases",
+                "qinfotext": "",
+                "qquestiontext": "What is a non-functional requirement?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "A quality or constraint such as speed, security or reliability",
+                "item1": "A quality or constraint such as speed, security or reliability",
+                "item2": "A line of source code that calls a function",
+                "item3": "A random value selected during testing",
+                "item4": "A diagram that only shows colours",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            
+            #datatypes
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data type stores whole numbers without a fractional component?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "integer",
+                "item1": "integer",
+                "item2": "real",
+                "item3": "string",
+                "item4": "boolean",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data type stores text as a sequence of characters?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "string",
+                "item1": "string",
+                "item2": "integer",
+                "item3": "boolean",
+                "item4": "real",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data type stores only true or false?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "boolean",
+                "item1": "boolean",
+                "item2": "char",
+                "item3": "integer",
+                "item4": "record",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data type is best for a single letter such as 'A'?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "char",
+                "item1": "char",
+                "item2": "boolean",
+                "item3": "array",
+                "item4": "real",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which number system uses only the digits 0 and 1?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "binary",
+                "item1": "binary",
+                "item2": "decimal",
+                "item3": "hexadecimal",
+                "item4": "real",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which number system uses base 16?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "hexadecimal",
+                "item1": "hexadecimal",
+                "item2": "binary",
+                "item3": "decimal",
+                "item4": "boolean",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data structure stores values in order and accesses them by index?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "array",
+                "item1": "array",
+                "item2": "boolean",
+                "item3": "syntax error",
+                "item4": "maintenance phase",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data structure groups related fields that may have different data types?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "record",
+                "item1": "record",
+                "item2": "stack",
+                "item3": "single precision floating point",
+                "item4": "breakpoint",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data structure follows Last In, First Out?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "stack",
+                "item1": "stack",
+                "item2": "queue",
+                "item3": "record",
+                "item4": "tree",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "datatypes",
+                "qinfotext": "",
+                "qquestiontext": "Which data structure stores data as key-value pairs?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "dictionary",
+                "item1": "dictionary",
+                "item2": "array",
+                "item3": "sequential file",
+                "item4": "boolean",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            
+            #algorithmic thinking
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "Which control structure executes instructions one after another in order?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "sequence",
+                "item1": "sequence",
+                "item2": "selection",
+                "item3": "iteration",
+                "item4": "backtracking",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "Which control structure chooses between different paths based on a condition?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "selection",
+                "item1": "selection",
+                "item2": "sequence",
+                "item3": "iteration",
+                "item4": "abstraction",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "Which control structure repeats instructions while a condition is met?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "iteration",
+                "item1": "iteration",
+                "item2": "selection",
+                "item3": "sequence",
+                "item4": "logic paradigm",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "Which technique breaks a large problem into smaller subproblems?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "divide & conquer",
+                "item1": "divide & conquer",
+                "item2": "single line stepping",
+                "item3": "installation",
+                "item4": "syntax checking",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "Which technique explores possible solutions and reverses decisions when a path fails?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "backtracking",
+                "item1": "backtracking",
+                "item2": "iteration",
+                "item3": "installation",
+                "item4": "hosting",
+                "qanswerspecialmethod": "",
+                "difficulty": 4
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "What is pseudocode used for?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Describing an algorithm in structured human-readable steps",
+                "item1": "Describing an algorithm in structured human-readable steps",
+                "item2": "Compiling a program directly into machine code",
+                "item3": "Replacing all testing and debugging",
+                "item4": "Storing encrypted passwords",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "What do flowcharts show?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "The sequence, decisions, inputs, outputs and flow of control in an algorithm",
+                "item1": "The sequence, decisions, inputs, outputs and flow of control in an algorithm",
+                "item2": "Only the colours used in a user interface",
+                "item3": "Only the names of database tables",
+                "item4": "The teacher assigned to a student",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "",
+                "qquestiontext": "Which term means simplifying complexity by focusing on essential features?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "abstraction",
+                "item1": "abstraction",
+                "item2": "runtime error",
+                "item3": "hexadecimal",
+                "item4": "maintenance",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "FOR i FROM 1 TO 3\n    DISPLAY i\nNEXT i",
+                "qquestiontext": "Which control structure is shown in this pseudocode?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "iteration",
+                "item1": "iteration",
+                "item2": "selection",
+                "item3": "sequence only",
+                "item4": "backtracking only",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "algorithmic thinking",
+                "qinfotext": "IF mark >= 50 THEN\n    DISPLAY 'Pass'\nELSE\n    DISPLAY 'Try again'\nENDIF",
+                "qquestiontext": "Which control structure is shown in this pseudocode?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "selection",
+                "item1": "selection",
+                "item2": "iteration",
+                "item3": "divide & conquer",
+                "item4": "sequence only",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            
+            #errors
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "Which error is caused by code that breaks the grammar rules of a programming language?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "syntax error",
+                "item1": "syntax error",
+                "item2": "logic error",
+                "item3": "runtime error",
+                "item4": "maintenance error",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "Which error occurs when a program runs but produces the wrong result?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "logic error",
+                "item1": "logic error",
+                "item2": "syntax error",
+                "item3": "runtime error",
+                "item4": "compile-time spelling",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "Which error occurs while the program is executing and may stop it unexpectedly?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "runtime error",
+                "item1": "runtime error",
+                "item2": "logic error",
+                "item3": "syntax error",
+                "item4": "design phase",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "total = 10 / 0",
+                "qquestiontext": "What type of error is most likely caused by this line when it runs?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "runtime error",
+                "item1": "runtime error",
+                "item2": "syntax error",
+                "item3": "requirements error",
+                "item4": "no error",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "IF score > 50 THEN DISPLAY 'Fail'",
+                "qquestiontext": "If the program runs but uses the wrong comparison outcome, what kind of error is it?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "logic error",
+                "item1": "logic error",
+                "item2": "syntax error",
+                "item3": "runtime error",
+                "item4": "data type",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "Which testing data checks values at the edge of an allowed range?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "boundary data",
+                "item1": "boundary data",
+                "item2": "random unrelated data",
+                "item3": "only invalid data",
+                "item4": "maintenance data",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "Which testing data should be accepted by the program?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "valid data",
+                "item1": "valid data",
+                "item2": "invalid data",
+                "item3": "out-of-range data",
+                "item4": "syntax data",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "Which testing data should be rejected by the program?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "invalid data",
+                "item1": "invalid data",
+                "item2": "valid data",
+                "item3": "normal data",
+                "item4": "expected data",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "What does validation do?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Checks that entered data follows required rules",
+                "item1": "Checks that entered data follows required rules",
+                "item2": "Proves that the data is true in the real world",
+                "item3": "Automatically designs the user interface",
+                "item4": "Deletes all incorrect code",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "errors",
+                "qinfotext": "",
+                "qquestiontext": "What does verification check?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "That data has been copied or entered accurately",
+                "item1": "That data has been copied or entered accurately",
+                "item2": "That an algorithm has no loops",
+                "item3": "That a teacher code is always blank",
+                "item4": "That every runtime error is impossible",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            
+            #debugging
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "What is a breakpoint used for?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Pausing execution so program state can be inspected",
+                "item1": "Pausing execution so program state can be inspected",
+                "item2": "Deleting variables from memory permanently",
+                "item3": "Skipping the testing phase",
+                "item4": "Changing decimal numbers to hexadecimal",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "What is single line stepping?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Executing a program one statement at a time",
+                "item1": "Executing a program one statement at a time",
+                "item2": "Running all code without stopping",
+                "item3": "Writing comments on every line",
+                "item4": "Opening one file at a time",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "What is a watch used for in debugging?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Monitoring the value of a variable or expression",
+                "item1": "Monitoring the value of a variable or expression",
+                "item2": "Timing how long a student takes on a quiz",
+                "item3": "Replacing a database table",
+                "item4": "Drawing a structure chart",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "What is a debugging output statement?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "A temporary statement used to display values or program flow",
+                "item1": "A temporary statement used to display values or program flow",
+                "item2": "A permanent password hashing method",
+                "item3": "A diagram showing only teacher codes",
+                "item4": "A rule for naming files",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "Which tool feature lets a developer inspect variables after stopping at a chosen line?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "breakpoint",
+                "item1": "breakpoint",
+                "item2": "hexadecimal",
+                "item3": "record",
+                "item4": "installation",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "What is the main purpose of debugging?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Finding and correcting errors in a program",
+                "item1": "Finding and correcting errors in a program",
+                "item2": "Avoiding all testing",
+                "item3": "Converting every string into an integer",
+                "item4": "Assigning students to courses",
+                "qanswerspecialmethod": "",
+                "difficulty": 1
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "Why might a developer trace through code manually?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "To follow variable changes and locate where behaviour becomes incorrect",
+                "item1": "To follow variable changes and locate where behaviour becomes incorrect",
+                "item2": "To make the program run without a computer",
+                "item3": "To remove the need for algorithms",
+                "item4": "To choose a random access level",
+                "qanswerspecialmethod": "",
+                "difficulty": 3
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "What is an IDE?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Software that provides tools such as an editor, compiler and debugger",
+                "item1": "Software that provides tools such as an editor, compiler and debugger",
+                "item2": "A type of runtime error",
+                "item3": "A base-2 number system",
+                "item4": "A student assignment table",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "Which practice helps locate a bug by printing variable values during execution?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "using debugging output statements",
+                "item1": "using debugging output statements",
+                "item2": "removing all selection statements",
+                "item3": "changing every integer to a string",
+                "item4": "skipping validation",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            },
+            {
+                "subtopic": "debugging",
+                "qinfotext": "",
+                "qquestiontext": "What should a developer do after finding the location of an error?",
+                "qassociatedimage": "",
+                "qquestiontype": 0,
+                "qcorrectanswer": "Correct the code and retest the program",
+                "item1": "Correct the code and retest the program",
+                "item2": "Delete all test cases",
+                "item3": "Ignore the error if it is intermittent",
+                "item4": "Change the project subtopic",
+                "qanswerspecialmethod": "",
+                "difficulty": 2
+            }
+        ]
+
+        fourOptionsQuestions.extend(additionalQuestions)
+
         numberOrStringQuestions = [
             #these are integer answers in the format of (subtopic, qinfotext, qquestiontext, qassociatedimage, qquestiontype, qcorrectanswer, difficulty), with no options. qquestiontype here will always be 4.
             #if the answer is to be calculated on the spot, the qcorrectanswer will be None.
@@ -494,8 +1297,6 @@ def init_questions():
             },
 
         ]
-
-        #because it is going from list to dictionary, this will have to be changed
 
         for question in fourOptionsQuestions:
             qattributelist = []
@@ -529,7 +1330,7 @@ def init_signs():
             ["Demo Finish", "", "<h2>Congratulations!</h2><p> You finished the demo quiz on the Software Development Phases! If you want to try more quizzes, you will have to sign up or log in if you already have an account.</p>"],
             ["SDLC Steps Part 1", "", "<h2>Requirements Definition:</h2><p> \n The initial phase where the needs of the user/client are gathered and clearly documented. It defines what the system must do.\n\n </p><h2>Determining Specifications:</h2><p> \n Translating the broad requirements into detailed, measurable specifications. This involves documenting both functional (what it does) and non-functional (how well it does it, e.g. speed, security) requirements.\n\n </p><h2>Design:</h2><p> \n Planning the how. Creating blueprints for the software, including user interface (UI), data structures and algorithms. Involves top-down design (breaking down) and bottom-up design (building components).</p>"],
             ["SDLC Steps Part 2", "", "<h2>Development (Coding):</h2><p> \n The actual writing of the software code based on the design specifications. This is often the longest phase. \n\n </p><h2>Integration:</h2><p> \n Combining individual, tested modules (subprograms) into a complete, working software system. This step focuses on ensuring all parts communicate correctly. \n\n </p><h2>Testing and Debugging:</h2><p> \n Rigorously checking the integrated software against the specifications to find and fix errors. Testing finds the error; Debugging locates and corrects the error.</p>"],
-            ["SDLC Steps Part 3", "", "<h2>Installation:</h2><p> \n Deploying the finidhed software into the client's working environment (e.g. installing it on their servers or computers). This includes setting up databases and configuring networks. \n\n </p><h2>Maintenance:</h2><p> \n Ongoing activity after deployment to keep the system operational and relevant. Includes fixing bugs (corrective), adapting to new environments (adaptive), and adding new features (perfective).</p>"]
+            ["SDLC Steps Part 3", "", "<h2>Installation:</h2><p> \n Deploying the finished software into the client's working environment (e.g. installing it on their servers or computers). This includes setting up databases and configuring networks. \n\n </p><h2>Maintenance:</h2><p> \n Ongoing activity after deployment to keep the system operational and relevant. Includes fixing bugs (corrective), adapting to new environments (adaptive), and adding new features (perfective).</p>"]
         ]
 
         for sign in signs:
@@ -577,77 +1378,6 @@ def check_var_for_indicator(variable, addToSessionData = True):
             else:
                 session['current_question_params'] = [param]
     return variable
-
-#get_question may be deleted because it shall no longer be used.
-def get_question(subtopic, robotType):
-    question_content, question_image_url, question_question, correct_num_or_string = None, None, None, None #present in all questions
-    item1, item2, item3, item4 = None, None, None, None #multiple choice, arrange, select and match
-    item1r, item2r, item3r, item4r = None, None, None, None #right items, only for match
-    #for string, it is self-explanatory.
-    #for integer (the integer answer will be written and matched as a string)
-    #for mcq, it is the text of the correct answer as a string
-    #for match, it is in the format of “L1R?L2R?L3R?L4R?”, with the question marks being replaced by the number of the right item that matches the left one.
-    #for arrange, it is a string of the items in correct order in the format "1234"
-    #for select, it is a string of the correct items in ascending order of when they appear.
-
-
-
-    #robot types:
-    #0 = multiple choice
-    #1 = match
-    #2 = arrange
-    #3 = select all that apply
-    #4 = integer
-    #5 = string
-
-    conn = get_db()
-    cursor = conn.cursor()
-
-    try:
-        total_questions = cursor.execute('SELECT COUNT(*) FROM Question WHERE qquestiontype = ? AND qsubtopic = ?', (robotType, subtopic,)).fetchone()[0]
-    except sqlite3.Error as e:
-        print(f"Look out! There was a database error: {e}")
-        return [None, None, None, None]
-    else:
-        if total_questions > 0:
-            random_index = random.randint(0, total_questions - 1)
-            question_data = cursor.execute('SELECT id, qinfotext, qassociatedimage, qquestiontext, qcorrectanswer, qanswerspecialmethod, difficulty FROM Question WHERE qquestiontype = ? AND qsubtopic = ? LIMIT 1 OFFSET ?', (robotType, subtopic, random_index,)).fetchone()
-            if question_data:
-                qid = question_data[0]
-                qdiff = question_data[-1]
-                qdict = {
-                        "robotType": robotType,
-                        "infotext": question_data[1],
-                        "qimage": question_data[2],
-                        "questiontext": question_data[3],
-                        "answer": question_data[4],
-                        "qansmethod": question_data[5],
-                        "qdiff": question_data[6]
-                    }
-
-                if robotType in [0, 1, 2, 3]: #questions with at least 4 options
-                    options = cursor.execute('SELECT item1, item2, item3, item4 FROM Question WHERE id = ?', (qid,)).fetchone()
-                    for option in options:
-                        option = check_var_for_indicator(option)
-
-                    if item4 is not None: #the fourth option will always have a value in 4 option questions.
-                        if robotType == 1: #for match questions
-                            item1r, item2r, item3r, item4r = cursor.execute('SELECT item1r, item2r, item3r, item4r FROM Question WHERE id = ?', (qid)).fetchone()
-                            item1r = check_var_for_indicator(item1r)
-                            item2r = check_var_for_indicator(item2r)
-                            item3r = check_var_for_indicator(item3r)
-                            item4r = check_var_for_indicator(item4r)
-                            return [robotType, question_content, question_image_url, question_question, correct_num_or_string, item1, item2, item3, item4, item1r, item2r, item3r, item4r, qdiff]
-                        return [robotType, question_content, question_image_url, question_question, correct_num_or_string, item1, item2, item3, item4, qdiff]
-                    return [robotType, question_content, question_image_url, question_question, correct_num_or_string, qdiff]
-                else:
-                    
-                    return [robotType, question_content, question_image_url, question_question, correct_num_or_string, qdiff]
-
-        else:
-            return [0, None, None, None, None]
-    finally:
-        conn.close()
 def get_sign(signtitle):
     conn = get_db()
     cursor = conn.cursor()
@@ -667,55 +1397,53 @@ def get_sign(signtitle):
     except sqlite3.Error as e:
         print(f"Look out! There was a database error: {e}")
         return {"robotType": 9, "title": signtitle, "image": None, "text": None}
+def solve_question(qsolvemethod, params):
+    global senPhases, eg_things_done_in_sen_phases, egstrings, glossaryTerms, examplesOfTerms
+    try:
+        if params:
+            if qsolvemethod == "datatype":
+                #here, it assumes params is a single value
+                intList = []
+                for i in range(101):
+                    intList.append(str(i))
 
-def solve_question(qsolvemethod, params): #params shall always be a list
-    global subtopics, senPhases, eg_things_done_in_sen_phases, egstrings, glossaryTerms, examplesOfTerms
+                if params in intList:
+                    return "integer"
+                elif params in ["True", "False"]:
+                    return "boolean"
+                elif "." in params:
+                    return "float"
+                else:
+                    return "string"
+            
+            elif qsolvemethod == "add2":
+                #takes 2 values
+                return int(params[0]) + int(params[1])
+            elif qsolvemethod == "addloop":
+                #takes 3 values
+                return int(params[0] + (int(params[1]) * int(params[2])))
+            
+            elif qsolvemethod == "findnextphase":
+                #the previous phase is given in params
+                if params == "maintenance":
+                    return "None"
+                else:
+                    phaseindex = senPhases.index(params)
+                    return senPhases[phaseindex + 1]
+            elif qsolvemethod == "findpreviousphase":
+                #the phase is given in params
+                if params == "requirements":
+                    return "None"
+                else:
+                    phaseindex = senPhases.index(params)
+                    return senPhases[phaseindex - 1]
 
-    if params:
-        if qsolvemethod == "datatype":
-            #here, it assumes params is a single value
-            intList = []
-            for i in range(101):
-                intList.append(str(i))
-
-            if params in intList:
-                return "integer"
-            elif params in ["True", "False"]:
-                return "boolean"
-            elif "." in params:
-                return "float"
-            else:
-                return "string"
-        
-        elif qsolvemethod == "add2":
-            #takes 2 values
-            return int(params[0]) + int(params[1])
-        elif qsolvemethod == "addloop":
-            #takes 3 values
-            return int(params[0] + (int(params[1]) * int(params[2])))
-        
-        elif qsolvemethod == "findnextphase":
-            #the previous phase is given in params
-            if params == "maintenance":
-                return "None"
-            else:
-                phaseindex = senPhases.index(params)
-                return senPhases[phaseindex + 1]
-        elif qsolvemethod == "findpreviousphase":
-            #the phase is given in params
-            if params == "requirements":
-                return "None"
-            else:
-                phaseindex = senPhases.index(params)
-                return senPhases[phaseindex - 1]
-
+            else: #should not be called.
+                return ""
         else: #should not be called.
             return ""
-    else: #should not be called.
-        return ""
-
-
-
+    except IndexError as e:
+        return "None of these"
 def generate_question_by_id(qid):
     conn = get_db()
     cursor = conn.cursor()
@@ -785,7 +1513,7 @@ def makeTestOrder(subtopic, signtitles, examTemplate=None):
 def makeDemoTest():
     template = [9, 9, 9, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9]
     signtitles = ["Welcome", "SDLC Steps Part 1", "SDLC Steps Part 2", "SDLC Steps Part 3", "Demo Finish"]
-    return makeTestOrder("sd phases", signtitles, template)
+    return makeTestOrder("demo", signtitles, template)
 
 
 def get_username_from_id(user_id):
@@ -801,6 +1529,49 @@ def get_username_from_id(user_id):
         conn.close()
 def convert_seconds_to_format(seconds):
     return f"{seconds // 60}:{seconds % 60:02d}"
+def is_logged_in():
+    return session.get('user_id') is not None
+def get_assigned_courses(student_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        return [
+            row[0] for row in cursor.execute(
+                'SELECT subtopic FROM AssignedCourses WHERE student_id = ? ORDER BY subtopic',
+                (student_id,)
+            ).fetchall()
+        ]
+    finally:
+        conn.close()
+def assign_course_to_student(student_id, subtopic, assigned_by=None):
+    if subtopic not in COURSE_SUBTOPICS:
+        return False
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT OR IGNORE INTO AssignedCourses (student_id, subtopic, assigned_by, assigned_at)
+            VALUES (?, ?, ?, ?)
+        ''', (student_id, subtopic, assigned_by, datetime.datetime.now(tz=utc_plus_10).isoformat()))
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+def remove_assigned_course(student_id, subtopic):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM AssignedCourses WHERE student_id = ? AND subtopic = ?', (student_id, subtopic))
+        conn.commit()
+    finally:
+        conn.close()
+def get_teacher_for_student(cursor, teachercode):
+    if not teachercode:
+        return None
+    return cursor.execute(
+        'SELECT id, username, selfcode FROM User WHERE selfcode = ? AND accesslevel = "teacher"',
+        (teachercode,)
+    ).fetchone()
 
 
 
@@ -827,9 +1598,9 @@ def convert_seconds_to_format(seconds):
 
 
 @app.before_request
-def session_timeout(): #setting up a limit so that session times out after 2 hours of inactivity
+def session_timeout(): #setting up a limit so that session times out after 1 hour of inactivity
     session.permanent = True 
-    app.permanent_session_lifetime = datetime.timedelta(hours=2)
+    app.permanent_session_lifetime = datetime.timedelta(hours=1)
     session.modified = True
 
 @app.route('/')
@@ -862,7 +1633,11 @@ def register():
                 return render_template('register.html', error="This email is already registered!")
             
             hashed_password = bcrypt.hashpw(uncpword.encode(), bcrypt.gensalt()).decode()
-            cursor.execute('INSERT INTO User (username, password, email, accesslevel) VALUES (?, ?, ?, ?)', (uname, hashed_password, uemail, alevel))
+            selfcode = generate_unique_teacher_code(cursor) if alevel == "teacher" else None
+            cursor.execute(
+                'INSERT INTO User (username, password, email, accesslevel, selfcode, teachercode) VALUES (?, ?, ?, ?, ?, ?)',
+                (uname, hashed_password, uemail, alevel, selfcode, None)
+            )
             conn.commit()
             user_id = cursor.execute('SELECT id FROM User WHERE username = ?', (uname,)).fetchone()[0]
             session['user_id'] = user_id
@@ -921,8 +1696,22 @@ def logout():
 @app.route('/loggedinhomepage')
 def loggedinhomepage():
     try:
-        return render_template('loggedinhomepage.html', username = get_username_from_id(session['user_id']))
-    except KeyError:    #when session expires or tries to access the homepage without having logged in
+        user_id = session['user_id']
+        conn = get_db()
+        cursor = conn.cursor()
+        user = cursor.execute('SELECT username, accesslevel FROM User WHERE id = ?', (user_id,)).fetchone()
+        conn.close()
+        if not user:
+            return redirect(url_for('home'))
+        assigned_courses = get_assigned_courses(user_id) if user[1] == 'student' else []
+        return render_template(
+            'loggedinhomepage.html',
+            username=user[0],
+            accesslevel=user[1],
+            assigned_courses=assigned_courses,
+            course_subtopics=COURSE_SUBTOPICS
+        )
+    except (KeyError, TypeError):    #when session expires or tries to access the homepage without having logged in
         return redirect(url_for('home'))
 
 
@@ -938,7 +1727,7 @@ def check_inactivity():
 def preparation():
     subtopic = ""
     if request.method == 'POST':
-        if session['user_id']:
+        if session.get('user_id'):
             subtopic = request.form['subtopic']
             if subtopic == "all":
                 pass
@@ -947,14 +1736,235 @@ def preparation():
             session['test_order'] = makeDemoTest()
             session['current_question_index'] = 0
     if subtopic == "":
-        return render_template('preparation.html')
+        return render_template('preparation.html', loggedin = is_logged_in())
     else:
-        return render_template('preparation.html', subtopic = subtopic)
-
-@app.route('/dashboard')
+        return render_template('preparation.html', subtopic = subtopic, loggedin = is_logged_in())
+@app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
-    pass
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
 
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        user_id = session['user_id']
+        user = cursor.execute('SELECT username, accesslevel, teachercode, selfcode FROM User WHERE id = ?', (user_id,)).fetchone()
+
+        if not user:
+            return redirect(url_for('login'))
+
+        username, accesslevel, teachercode, selfcode = user
+
+        if accesslevel == 'teacher':
+            students = [
+                {
+                    "id": row[0],
+                    "username": row[1],
+                    "assigned_courses": get_assigned_courses(row[0])
+                }
+                for row in cursor.execute(
+                    'SELECT id, username FROM User WHERE teachercode = ? AND accesslevel = "student" ORDER BY username',
+                    (selfcode,)
+                ).fetchall()
+            ]
+            student_count = len(students)
+            return render_template(
+                'dashboard.html',
+                username=username,
+                accesslevel=accesslevel,
+                user_id=user_id,
+                selfcode=selfcode,
+                student_count=student_count,
+                students=students,
+                course_subtopics=COURSE_SUBTOPICS
+            )
+
+        elif accesslevel == 'student':
+            teacher_row = get_teacher_for_student(cursor, teachercode)
+            teacher = {"id": teacher_row[0], "username": teacher_row[1], "selfcode": teacher_row[2]} if teacher_row else None
+            scores = [
+                {"quiznumber": row[0], "score": row[1], "totalmarks": row[2], "subtopic": row[3]} for row in cursor.execute(
+                    'SELECT quiznumber, score, totalmarks, subtopic FROM Marks WHERE testtakerid = ? ORDER BY id DESC LIMIT 20',
+                    (user_id,)
+                ).fetchall()
+            ]
+            assigned_courses = get_assigned_courses(user_id)
+
+            return render_template(
+                'dashboard.html',
+                username=username,
+                accesslevel=accesslevel,
+                user_id=user_id,
+                teacher=teacher,
+                scores=scores,
+                assigned_courses=assigned_courses,
+                verified=request.args.get('verified'),
+                course_subtopics=COURSE_SUBTOPICS
+            )
+
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return redirect(url_for('home'))
+    finally:
+        conn.close()
+@app.route('/adminzone', methods=['GET'])
+def adminzone():
+    try:
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+
+        conn = get_db()
+        cursor = conn.cursor()
+        user = cursor.execute('SELECT accesslevel FROM User WHERE id = ?', (session['user_id'],)).fetchone()
+        conn.close()
+
+        if user and user[0] == 'host':
+            return render_template('adminzone.html')
+        else:
+            return redirect(url_for('loggedinhomepage'))
+    except Exception as e:
+        print(f"Error in adminzone: {e}")
+        return redirect(url_for('home'))
+
+@app.route('/add_q_to_db', methods=['GET', 'POST'])
+def add_q_to_db():
+    if request.method == 'POST':
+        subtopic = request.form.get('subtopic')
+        info = request.form.get('info')
+        question = request.form.get('question')
+        image = request.form.get('image')
+        robotType = request.form.get('robotType')
+        answer = request.form.get('answer')
+        i1 = request.form.get('i1')
+        i2 = request.form.get('i2')
+        i3 = request.form.get('i3')
+        i4 = request.form.get('i4')
+        answermethod = request.form.get('answermethod')
+        difficulty = request.form.get('difficulty')
+        adminconfirm = request.form.get('adminconfirm')
+
+        conn = get_db()
+        cursor = conn.cursor()
+
+        try:
+            # Verify admin password
+            admin = cursor.execute('SELECT password FROM User WHERE id = ?', (session['user_id'],)).fetchone()
+            if admin and bcrypt.checkpw(adminconfirm.encode(), admin[0] if isinstance(admin[0], bytes) else admin[0].encode()):
+                cursor.execute('''
+                    INSERT INTO Question (qsubtopic, qinfotext, qquestiontext, qassociatedimage, qquestiontype, qcorrectanswer, item1, item2, item3, item4, qanswerspecialmethod, difficulty)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (subtopic, info, question, image, robotType, answer, i1, i2, i3, i4, answermethod, difficulty))
+                conn.commit()
+                return jsonify({"status": "success", "message": "Question added successfully!"})
+            else:
+                return jsonify({"status": "error", "message": "Admin password incorrect!"})
+        except Exception as e:
+            print(f"Error adding question: {e}")
+            return jsonify({"status": "error", "message": "An error occurred while adding the question."})
+        finally:
+            conn.close()
+    return redirect(url_for('loggedinhomepage'))
+@app.route('/add_s_to_db', methods=['GET', 'POST'])
+def add_s_to_db():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        text = request.form.get('text')
+        image = request.form.get('image')
+        adminconfirm = request.form.get('adminconfirm')
+
+        conn = get_db()
+        cursor = conn.cursor()
+
+        try:
+            # Verify admin password
+            admin = cursor.execute('SELECT password FROM User WHERE id = ?', (session['user_id'],)).fetchone()
+            if admin and bcrypt.checkpw(adminconfirm.encode(), admin[0] if isinstance(admin[0], bytes) else admin[0].encode()):
+                cursor.execute('''
+                    INSERT INTO Signs (signtitle, signtext, signimageurl)
+                    VALUES (?, ?, ?)
+                ''', (title, text, image))
+                conn.commit()
+                return jsonify({"status": "success", "message": "Sign added successfully!"})
+            else:
+                return jsonify({"status": "error", "message": "Admin password incorrect!"})
+        except Exception as e:
+            print(f"Error adding sign: {e}")
+            return jsonify({"status": "error", "message": "An error occurred while adding the sign."})
+        finally:
+            conn.close()
+    return redirect(url_for('loggedinhomepage'))
+
+@app.route('/assign_teacher', methods=['POST'])
+def assign_teacher():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    teacher_code = request.form.get('teacher_code', '').strip().upper()
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        user = cursor.execute('SELECT accesslevel FROM User WHERE id = ?', (session['user_id'],)).fetchone()
+        teacher = get_teacher_for_student(cursor, teacher_code)
+        if user and user[0] == 'student' and teacher:
+            cursor.execute('UPDATE User SET teachercode = ? WHERE id = ?', (teacher_code, session['user_id']))
+            conn.commit()
+            return redirect(url_for('dashboard', verified='true'))
+        return redirect(url_for('dashboard', verified='false'))
+    finally:
+        conn.close()
+@app.route('/assign_course', methods=['POST'])
+def assign_course():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    student_id = request.form.get('student_id')
+    subtopic = request.form.get('subtopic')
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        teacher = cursor.execute('SELECT accesslevel, selfcode FROM User WHERE id = ?', (session['user_id'],)).fetchone()
+        student = cursor.execute(
+            'SELECT id FROM User WHERE id = ? AND accesslevel = "student" AND teachercode = ?',
+            (student_id, teacher[1] if teacher else None)
+        ).fetchone()
+        if teacher and teacher[0] == 'teacher' and student and subtopic in COURSE_SUBTOPICS:
+            cursor.execute('''
+                INSERT OR IGNORE INTO AssignedCourses (student_id, subtopic, assigned_by, assigned_at)
+                VALUES (?, ?, ?, ?)
+            ''', (student_id, subtopic, session['user_id'], datetime.datetime.now(tz=utc_plus_10).isoformat()))
+            conn.commit()
+    finally:
+        conn.close()
+    return redirect(url_for('dashboard'))
+@app.route('/get_student_scores')
+def get_student_scores():
+    if 'user_id' not in session:
+        return jsonify({'scores': []})
+
+    student_id = request.args.get('student_id')
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        teacher = cursor.execute('SELECT accesslevel, selfcode FROM User WHERE id = ?', (session['user_id'],)).fetchone()
+        if not teacher or teacher[0] != 'teacher':
+            return jsonify({'scores': []})
+        student = cursor.execute(
+            'SELECT id FROM User WHERE id = ? AND accesslevel = "student" AND teachercode = ?',
+            (student_id, teacher[1])
+        ).fetchone()
+        if not student:
+            return jsonify({'scores': []})
+        scores = [
+            {'quiznumber': row[0], 'score': row[1], 'totalmarks': row[2], 'subtopic': row[3] or 'Unknown'}
+            for row in cursor.execute(
+                'SELECT quiznumber, score, totalmarks, subtopic FROM Marks WHERE testtakerid = ? ORDER BY id DESC LIMIT 20',
+                (student_id,)
+            ).fetchall()
+        ]
+        return jsonify({'scores': scores})
+    finally:
+        conn.close()
 
 @app.route('/signpage')
 def signpage():
@@ -963,9 +1973,9 @@ def signpage():
         'signpage.html',
         signtitle=data["title"],
         signimage=data["image"],
-        signtext=data["text"]
+        signtext=data["text"],
+        loggedin=is_logged_in()
     )
-
 @app.route('/testpage')
 def testpage():
     try:
@@ -974,28 +1984,15 @@ def testpage():
         difficulty = data["difficulty"]
         time_limit = 30 if difficulty <= 4 else 45 if difficulty <= 7 else 60
 
-        session['qtimerstart'] = datetime.datetime.now(tz=utc_plus_10)
+        if session.get('qtimer_question_id') != data.get("id"):
+            session['qtimerstart'] = datetime.datetime.now(tz=utc_plus_10)
+            session['qtimer_question_id'] = data.get("id")
 
-        if session.get('qtimerstart') and session.get('difficulty'):
-            difficulty = data["difficulty"]
-            time_limit = 30 if difficulty <= 4 else 45 if difficulty <= 7 else 60
-            if (datetime.datetime.now(tz=utc_plus_10) - session.get('qtimerstart')).total_seconds() < time_limit:
-                random.shuffle(data["options"])
-                return render_template(
-                    'testpage.html',
-                    robotType=data["robotType"],
-                    questionText=data["text"],
-                    questionInfo=data["info"],
-                    questionImage=data["image"],
-                    i1=data["options"][0],
-                    i2=data["options"][1],
-                    i3=data["options"][2],
-                    i4=data["options"][3],
-                    timer=convert_seconds_to_format(round(time_limit - (datetime.datetime.now(tz=utc_plus_10) - session['qtimerstart']).total_seconds())),
-                    qindex = session.get('question_number_within_test', 1)
-                    )
-            else:
-                return redirect(url_for('checkanswer'))
+        elapsed = (datetime.datetime.now(tz=utc_plus_10) - session.get('qtimerstart')).total_seconds()
+        remaining_seconds = max(0, round(time_limit - elapsed))
+
+        if remaining_seconds <= 0:
+            return redirect(url_for('checkanswer', timeout=1))
         
         return render_template(
             'testpage.html',
@@ -1007,21 +2004,27 @@ def testpage():
             i2=data["options"][1],
             i3=data["options"][2],
             i4=data["options"][3],
-            timer=convert_seconds_to_format(round(time_limit - (datetime.datetime.now(tz=utc_plus_10) - session['qtimerstart']).total_seconds())),
-            qindex = session.get('question_number_within_test', 1)
+            timer=convert_seconds_to_format(remaining_seconds),
+            timer_seconds=remaining_seconds,
+            qindex = session.get('question_number_within_test', 1),
+            loggedin=is_logged_in()
             )
     except Exception as e:
+        print(f"Hey uh, this might be hard for you to hear but {e}")
         return redirect(url_for('home')) #when an exception like this is thrown,
         #it is assumed that it is because the user is timed out, which sends them back to the landing page.
 
 @app.route('/checkanswer', methods=['GET', 'POST'])
 def checkanswer():
     try:
-        try:
-            answer = request.form["answer"]
-        except Exception as e:
-            #print("I am the source of all your problems!")
-            return redirect(url_for('next_question'))
+        if request.args.get('timeout') == '1':
+            answer = ""
+        else:
+            try:
+                answer = request.form["answer"]
+            except Exception as e:
+                #print("I am the source of all your problems!")
+                return redirect(url_for('next_question'))
 
         data = session.get('current_question_data')
         if not data:
@@ -1084,7 +2087,9 @@ def checkanswer():
                 questionInfo=question_data['info'],
                 qindex=qnum,
                 timedout=True,
-                verdict=qverdict
+                verdict=qverdict,
+                correctAnswer=data['answer'],
+                loggedin=is_logged_in()
             )
         else:
             #print(f"It's nothing personal, it's just business... {question_data.get('type')}")
@@ -1093,18 +2098,20 @@ def checkanswer():
     except Exception as e:
         #print(f"You feeling exceptional yet? here is {e}")
         return redirect(url_for('home'))
-
 @app.route('/start_test', methods=['GET', 'POST'])
 def start_test():
     try:
         subtopic = request.form.get('subtopic', 'sd phases')
+        if subtopic not in COURSE_SUBTOPICS:
+            subtopic = 'sd phases'
+        session['quiz_subtopic'] = subtopic
 
         if not session.get('user_id'):
             session['test_order'] = makeDemoTest()
         else:
             session['test_order'] = makeTestOrder(subtopic, ["Welcome", "Demo Finish"])
             session['quiz_score'] = 0
-            session['quiz_total'] = len(session['test_order'])
+            session['quiz_total'] = len([item for item in session['test_order'] if item.get("type") == "question_template"])
 
         session['current_question_index'] = 0
         session['question_number_within_test'] = 0
@@ -1112,7 +2119,6 @@ def start_test():
     except Exception as e:
         #print(f"Error starting test: {e}")
         return redirect(url_for('login'))
-
 @app.route('/next_question', methods = ['GET', 'POST'])
 def next_question():
     order = session.get('test_order', [])
@@ -1123,22 +2129,29 @@ def next_question():
         if session.get('user_id'):
             conn = get_db()
             cursor = conn.cursor()
-            teacher = cursor.execute('SELECT teacherid from User WHERE id=?', session.get('user_id'))
-
-            cursor.execute('''
-                INSERT INTO Marks (testtakerid, teacherid, quiznumber, score, totalmarks)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                session['user_id'],
-                teacher,
-                1,
-                session.get('quiz_score', 0),
-                session.get('quiz_total', 0)
-            ))
-            print("Logged Test")
-            conn.commit()
+            selfid = session.get('user_id')
+            user = cursor.execute('SELECT accesslevel, teachercode FROM User WHERE id=?', (selfid,)).fetchone()
+            if user and user[0] == "student":
+                teacher = get_teacher_for_student(cursor, user[1])
+                teacher_id = teacher[0] if teacher else None
+                cursor.execute('''
+                    INSERT INTO Marks (testtakerid, teacherid, quiznumber, score, totalmarks, subtopic)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    selfid,
+                    teacher_id,
+                    1,
+                    session.get('quiz_score', 0),
+                    session.get('quiz_total', 0),
+                    session.get('quiz_subtopic')
+                ))
+                if session.get('quiz_subtopic') in get_assigned_courses(selfid):
+                    cursor.execute(
+                        'DELETE FROM AssignedCourses WHERE student_id = ? AND subtopic = ?',
+                        (selfid, session.get('quiz_subtopic'))
+                    )
+                conn.commit()
             conn.close()
-        print("Completed test. Going home now...")
         return redirect(url_for('loggedinhomepage'))
 
     item = order[i]
@@ -1158,7 +2171,7 @@ def next_question():
         if item["subtopic"] == "all":
             qid = cursor.execute(
                 "SELECT id FROM Question WHERE qquestiontype=? ORDER BY RANDOM() LIMIT 1",
-                (item["robotType"])
+                (item["robotType"],)
               ).fetchone()
         else:
             qid = cursor.execute(
@@ -1171,10 +2184,10 @@ def next_question():
         if not qid:
             print("Error: There was some trouble finding questions for you...")
             return redirect(url_for('next_question'))
-
+        session['qtimerstart'] = datetime.datetime.now(tz=utc_plus_10)
+        #this is just here to ensure the timer always resets and does not automatically timeout or start at the wrong time.
         session['current_question_data'] = generate_question_by_id(qid[0])
         return redirect(url_for('testpage'))
-
 @app.route('/qtimerexpired', methods=['POST'])
 def qtimerexpired():
     data = session.get('current_question_data')
@@ -1185,21 +2198,20 @@ def qtimerexpired():
 
 
 
-if __name__ == '__main__':
-    with app.app_context():
-      purge_db()
-      init_db()
-      createDummyUser()
-      init_questions()
-      init_signs()
-      #auto_github_commit('./', 'Testing automatic update from app.py')
-      app.run(debug=True)
+#if __name__ == '__main__':
+#    with app.app_context():
+#      purge_db()
+#      init_db()
+#      createDummyUser()
+#      init_questions()
+#      init_signs()
+#      app.run(debug=True)
 #this runs when testing/debugging
 
-#if __name__ == "__main__":
-#    init_db()
-#    createDummyUser()
-#    init_questions()
-#    init_signs()
-#    app.run(host="0.0.0.0", port=5000, debug=False)
-#hopefully this is what will run when the webiste is hosted for real.
+if __name__ == "__main__":
+    init_db()
+    createDummyUser()
+    init_questions()
+    init_signs()
+    app.run(host="0.0.0.0", port=5000, debug=False)
+# for mac users, you will have to go to System Settings and disable AirPlay Receiver, as this occupies port 5000
