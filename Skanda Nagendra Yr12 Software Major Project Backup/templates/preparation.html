@@ -15,24 +15,23 @@
     <!-- This always appears at the top of every page. -->
     <div class="toolbar">
         <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
-        <h1>Website Title!!</h1>
-        <a href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
-        <div style="width: 10%;"></div>
+        <h1>SEN - Start Course</h1>
+        <a href="{% if loggedin %}/logout{% else %}/login{% endif %}"><div class="toolbar_button" id="login_button">{% if loggedin %}Log Out{% else %}Log In{% endif %}</div></a>
     </div>
     
 
     <div class="container">
-        <h1>Do you feel prepared (trademark)?</h1>
+        <h1>Get Ready...</h1>
         <p>
             {% if subtopic %}
             You are about to start a test on {{ subtopic }}
             {% else %}
-            There is not much done... I don't know what to do... Demo Test for you!
+            You will be starting the Demo Test now, good luck!
             {% endif %}
         </p>
         <form action="/start_test" method="post">
-            <input type="hidden" id="subtopic" name="subtopic" value="sd phases">
-            <button type="submit">Click to happen</button>
+            <input type="hidden" id="subtopic" name="subtopic" value="{% if subtopic %}{{ subtopic }}{% else %}sd phases{% endif %}">
+            <button type="submit">Continue</button>
         </form>
 
     </div>
