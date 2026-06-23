@@ -6,738 +6,219 @@
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" type="image/png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    
-    <title>SEN - Question {% if qindex %}{{ qindex }}{% else %} 1 {% endif %}</title>
-
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #1a1a1a;
-    }
-
-    .app-container {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background-color: #3d3f52;
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-      padding: 0;
-    }
-
-/* to convert between rem and vh, the formula is 1rem = (viewport height in pixels) * (rem value / 100)
-*/
-
-.header-bar-wrapper {
-  width: 100%;
-  max-width: 1200px;
-  padding: 2rem 1rem 0 1rem;
-  position: relative;
-  z-index: 10;
-  transform: translateY(20vh);
-}
-
-.header-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem 3rem;
-  background-color: #6a9c9e;
-  border-radius: 9999px;
-  border: 6px solid #3d3f52;
-  position: relative;
-}
-
-.header-text {
-  color: white;
-  font-style: italic;
-  font-family: Georgia, serif;
-  font-size: clamp(1.25rem, 4vw, 2rem);
-}
-
-.icon-circle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  height: 3vh;
-  width: 3vh;
-  background-color: white;
-  border: 1vh solid #3d3f52;
-  border-radius: 100%;
-  padding: 2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.content-container {
-  width: 100%;
-  min-height: 100vh;
-  background-color: rgba(169, 178, 188, 0.85);
-  border: 8px solid #3d3f52;
-  border-radius: 3rem 3rem 0 0;
-  padding: 4rem 6rem 2rem 6rem;
-  margin-top: 12rem;
-  box-sizing: border-box;
-  overflow-y: auto;
-}
-
-.content-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 2rem;
-}
-
-.text-content {
-  flex: 1;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.image-container {
-  width: 200px;
-  flex-shrink: 0;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.side-image {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
-
-.content-title {
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-family: Georgia, serif;
-  color: #2d2f3f;
-  margin-bottom: 1rem;
-}
-
-.content-text {
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  font-family: Georgia, serif;
-  color: #2d2f3f;
-  line-height: 1.6;
-}
-
-button {
-  align-items: center;
-}
-
-span {
-  align-items: center;
-}
-
-@media (max-width: 768px) {
-  .header-bar {
-    padding: 1rem 2rem;
-  }
-
-  .header-bar-wrapper {
-    padding: 1rem 0.5rem 0 0.5rem;
-  }
-
-  .content-container {
-    padding: 3rem 2rem 1rem 2rem;
-  }
-
-  .content-inner {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .image-container {
-    width: 200vh;
-  }
-}
-    .min-h-screen {
-      min-height: 100vh;
-    }
-    .flex {
-      display: flex;
-    }
-    .items-center {
-      align-items: center;
-    }
-    .justify-center {
-      justify-content: center;
-    }
-    .p-4 {
-      padding: 1rem;
-    }
-    .relative {
-      position: relative;
-    }
-    .w-full {
-      width: 100%;
-    }
-    .max-w-6xl {
-      max-width: 72rem;
-    }
-    .rounded-3xl {
-      border-radius: 1.5rem;
-    }
-    .overflow-hidden {
-      overflow: hidden;
-    }
-    .opacity-40 {
-      opacity: 0.4;
-    }
-    .absolute {
-      position: absolute;
-    }
-    .inset-0 {
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-    }
-    .-z-10 {
-      z-index: -10;
-    }
-    .text-white {
-      color: white;
-    }
-    .text-center {
-      text-align: center;
-    }
-    .rounded-xl {
-      border-radius: 0.75rem;
-    }
-    .p-8 {
-      padding: 2rem;
-    }
-    .border {
-      border: 1px solid;
-    }
-    .shadow-2xl {
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    }
-    .mt-6 {
-      margin-top: 1.5rem;
-    }
-    .p-6 {
-      padding: 1.5rem;
-    }
-    .rounded-lg {
-      border-radius: 0.5rem;
-    }
-    .mt-4 {
-      margin-top: 1rem;
-    }
-    .px-8 {
-      padding-left: 2rem;
-      padding-right: 2rem;
-    }
-    .py-3 {
-      padding-top: 0.75rem;
-      padding-bottom: 0.75rem;
-    }
-    .bg-slate-700 {
-      background-color: #374151;
-    }
-    .hover\:bg-slate-600:hover {
-      background-color: #4b5563;
-    }
-    .transition-all {
-      transition: all 0.3s ease;
-    }
-    .duration-200 {
-      transition-duration: 200ms;
-    }
-    .border-slate-600 {
-      border-color: #4b5563;
-    }
-    .mt-8 {
-      margin-top: 2rem;
-    }
-    .px-6 {
-      padding-left: 1.5rem;
-      padding-right: 1.5rem;
-    }
-    .bg-slate-800 {
-      background-color: #1e293b;
-    }
-    .hover\:bg-slate-700:hover {
-      background-color: #374151;
-    }
-    .transition-colors {
-      transition: color 0.3s ease;
-    }
-    .text-white {
-      color: white;
-    }
-  </style>
+    <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
+    <title>SEN - Question {% if qindex %}{{ qindex }}{% else %}1{% endif %}</title>
 </head>
 <body>
+    {% set options = [i1, i2, i3, i4] %}
+    {% set letters = ["A", "B", "C", "D"] %}
+
     <div class="toolbar">
-        <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
-        <h1>Website Title!!</h1>
-        <a href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
-        <div style="width: 10%;"></div>
+        <a href="{% if loggedin %}/loggedinhomepage{% else %}/{% endif %}"><div class="toolbar_button">Home</div></a>
+        <h1>SEN</h1>
+        <a href="{% if loggedin %}/logout{% else %}/login{% endif %}">
+            <div class="toolbar_button" id="login_button">{% if loggedin %}Log Out{% else %}Log In{% endif %}</div>
+        </a>
     </div>
-    
-    <div class="header-bar-wrapper" style="float: top; width: 100%; z-index: 1;">
-        .<br><br><br><br><br><br><br><br><br><br><br>
-        <div class="header-bar">
-            {% if isTestReal %}
-                <span class="header-text">Test</span>
-            {% else %}
-                <span class="header-text">Pre-Test</span>
-            {% endif %}
-          <span class="header-text">
-            Question {% if qindex %}{{ qindex }}{% else %} 1 {% endif %}
-          </span>
-          <div class="icon-circle">
-            <div id="timer" class="layout-fixer" style="color: #1a1a1a; font-size: 3vh; font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif">
-            
-              {% if timer %}
-              {{ timer }}
-                  <script>
-                    let remainingTime = {{ timer }};
-                    // do not worry about the error under the {{ timer }},
-                    // because Flask automatically replaces it with the timer value when rendering
-                    const timerElement = document.querySelector('.timer');
-                    const interval = setInterval(() => {
-                        remainingTime--;
-                        if (remainingTime == "0:00") {
-                          clearInterval(interval);
-                          //post to /timeout route to handle the timeout logic 
-                          fetch('/timeout', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ questionId: {{ questionId }} })
-                          }).then(response => {
-                            if (response.ok) {
-                              console.log('Timeout recorded successfully');
-                            } else {
-                              console.error('Error recording timeout');
+
+    <main class="page-shell">
+        <div class="swamp-header-wrapper">
+            <div class="swamp-header">
+                <span class="swamp-header-title">{% if isTestReal %}Test{% else %}Pre-Test{% endif %}</span>
+                <div id="timer" class="timer-badge" data-seconds="{{ timer_seconds | default(0) }}">
+                    {% if timer %}{{ timer }}{% elif timedout %}{% if verdict %}{{ verdict }}{% else %}x{% endif %}{% else %}0:00{% endif %}
+                </div>
+                <span class="swamp-header-title">Question {% if qindex %}{{ qindex }}{% else %}1{% endif %}</span>
+            </div>
+        </div>
+
+        <section class="swamp-panel">
+            <div class="test-stage">
+                <div class="question-card">
+                    {% if questionInfo %}
+                        <pre class="question-info">{{ questionInfo }}</pre>
+                    {% endif %}
+
+                    <h2 class="question-title">{% if questionText %}{{ questionText }}{% else %}Insert Question Here{% endif %}</h2>
+
+                    {% if questionImage %}
+                        <div class="side-image-card">
+                            <img src="{{ questionImage }}" alt="Question illustration">
+                        </div>
+                    {% endif %}
+
+                    {% if robotType == 0 or not robotType %}
+                        {% if not feedback %}
+                            <form action="/checkanswer" method="post">
+                                <div class="answer-grid">
+                                    {% for option in options %}
+                                        <button class="option-button" type="submit" name="answer" value="{{ option }}">
+                                            <span class="option-letter">{{ letters[loop.index0] }}</span>
+                                            <span class="option-text">{{ option }}</span>
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="answer-grid">
+                                {% for option in options %}
+                                    <div class="option-display {% if option|string|trim|lower == correctAnswer|string|trim|lower %}correct{% else %}incorrect{% endif %}">
+                                        <span class="option-letter">{{ letters[loop.index0] }}</span>
+                                        <span class="option-text">{{ option }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% elif robotType == 1 %}
+                        <form action="/checkanswer" method="post" class="robot-form">
+                            <div class="match-columns">
+                                <div>
+                                    <h3>Prompts</h3>
+                                    <ul class="match-list">
+                                        {% for prompt in prompts %}
+                                            <li>{{ prompt }}</li>
+                                        {% else %}
+                                            <li>Prompt 1</li>
+                                            <li>Prompt 2</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h3>Answers</h3>
+                                    <ul class="match-list">
+                                        {% for answer in answers %}
+                                            <li>{{ answer }}</li>
+                                        {% else %}
+                                            <li>Answer 1</li>
+                                            <li>Answer 2</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" name="answer" value="">
+                            <button type="submit">Submit</button>
+                        </form>
+                    {% elif robotType == 2 %}
+                        <form action="/checkanswer" method="post" class="robot-form">
+                            <ul id="sortable" class="robot-list">
+                                {% for item in items %}
+                                    <li draggable="true">{{ item }}</li>
+                                {% else %}
+                                    {% for option in options %}
+                                        <li draggable="true">{{ option }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            </ul>
+                            <input type="hidden" name="answer" id="order">
+                            <button type="submit">Submit</button>
+                        </form>
+                        <script>
+                            const sortable = document.getElementById("sortable");
+                            const orderInput = document.getElementById("order");
+                            function saveOrder() {
+                                orderInput.value = Array.from(sortable.children).map(item => item.textContent.trim()).join("|");
                             }
-                          }).catch(error => {
-                            console.error('Error:', error);
-                          });
-                          location.reload();
+                            sortable.addEventListener("dragstart", event => event.target.classList.add("dragging"));
+                            sortable.addEventListener("dragend", event => {
+                                event.target.classList.remove("dragging");
+                                saveOrder();
+                            });
+                            sortable.addEventListener("dragover", event => {
+                                event.preventDefault();
+                                const dragging = sortable.querySelector(".dragging");
+                                const after = Array.from(sortable.querySelectorAll("li:not(.dragging)")).find(item => event.clientY <= item.getBoundingClientRect().top + item.offsetHeight / 2);
+                                sortable.insertBefore(dragging, after || null);
+                            });
+                            saveOrder();
+                        </script>
+                    {% elif robotType == 3 %}
+                        <form action="/checkanswer" method="post" class="robot-form">
+                            <div class="answer-grid">
+                                {% for option in options %}
+                                    <label class="select-option">
+                                        <input type="checkbox" name="answers" value="{{ option }}">
+                                        <span>{{ option }}</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                            <input type="hidden" name="answer" id="selectedAnswers">
+                            <button type="submit">Submit</button>
+                        </form>
+                        <script>
+                            document.querySelector(".robot-form").addEventListener("submit", () => {
+                                document.getElementById("selectedAnswers").value = Array.from(document.querySelectorAll("input[name='answers']:checked")).map(input => input.value).join("|");
+                            });
+                        </script>
+                    {% elif robotType == 4 %}
+                        <form action="/checkanswer" method="post" class="robot-form">
+                            <label for="integerInput">Enter your answer:</label>
+                            <input type="number" name="answer" id="integerInput" class="answer-input">
+                            <button type="submit">Submit</button>
+                        </form>
+                    {% elif robotType == 5 %}
+                        <form action="/checkanswer" method="post" class="robot-form">
+                            <label for="stringInput">Enter your answer:</label>
+                            <input type="text" name="answer" id="stringInput" class="answer-input">
+                            <button type="submit">Submit</button>
+                        </form>
+                    {% else %}
+                        <p>The robot is here because it could not find any better friends to torment you with.</p>
+                    {% endif %}
 
-                        } else {
-                            timerElement.textContent = remainingTime;
-                        }
-                    }, 1000);
-                    // the cesspool of errors are all accounted for due to the double curly braces.
-                  </script>
-              {% elif timedout %}
-                  {% if verdict %} {{ verdict }} {% else %} × {% endif %}
-              {% else %}
-                  0:00
-              {% endif %}
-            
+                    {% if feedback %}
+                        <div class="action-row">
+                            <form action="/next_question">
+                                <button type="submit">Next Question</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <aside class="robot-card {% if feedback %}feedback{% endif %}" style="background-color: #ffffff;">
+                    {% if feedback %}
+                        {{ feedback }}
+                    {% else %}
+                        {% if robotType == 1 %}
+                            <img src="{{ url_for('static', filename='botmatch.png') }}" alt="Match robot" class="robot-image">
+                        {% elif robotType == 2 %}
+                            <img src="{{ url_for('static', filename='botarrange.png') }}" alt="Arrange robot" class="robot-image">
+                        {% elif robotType == 3 %}
+                            <img src="{{ url_for('static', filename='botselectapplying.png') }}" alt="Select robot" class="robot-image">
+                        {% elif robotType == 4 %}
+                            <img src="{{ url_for('static', filename='botnumber.png') }}" alt="Number robot" class="robot-image">
+                        {% elif robotType == 5 %}
+                            <img src="{{ url_for('static', filename='botstring.png') }}" alt="String robot" class="robot-image">
+                        {% else %}
+                            <img src="{{ url_for('static', filename='botmultichoice.png') }}" alt="Multiple choice robot" class="robot-image">
+                        {% endif %}
+                    {% endif %}
+                </aside>
             </div>
-          </div>
-      </div>
-  
-    <div class="min-h-screen w-full flex items-center justify-center p-4" style="background: #1a1a1a;" style="background-image: url('/static/swampbg.png'); background-size: cover; background-position: center; float: top;">
-    {% if isTestReal %}
-        <div class="relative w-full max-w-6xl" style="box-shadow: 0 0 120px 60px rgba(246, 59, 59, 0.5), inset 0 0 100px 40px rgba(246, 59, 59, 0.4); border: 2px solid rgba(246, 59, 59, 0.6); border-radius: 24px; padding: 60px; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%);" style="background-image: url('/static/swampbg.png'); background-size: cover;">
-    {% else %}
-        <div class="relative w-full max-w-6xl" style="box-shadow: 0 0 120px 60px rgba(59, 130, 246, 0.5), inset 0 0 100px 40px rgba(59, 130, 246, 0.4); border: 2px solid rgba(59, 130, 246, 0.6); border-radius: 24px; padding: 60px; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%);" style="background-image: url('/static/swampbg.png'); background-size: cover;">
+        </section>
+    </main>
+
+    {% if timer_seconds and not feedback %}
+        <script>
+            const timerElement = document.getElementById("timer");
+            let remainingTime = Number(timerElement.dataset.seconds || 0);
+            function formatTime(seconds) {
+                const safeSeconds = Math.max(0, seconds);
+                const minutes = Math.floor(safeSeconds / 60);
+                const secs = String(safeSeconds % 60).padStart(2, "0");
+                return `${minutes}:${secs}`;
+            }
+            const interval = setInterval(() => {
+                remainingTime -= 1;
+                timerElement.textContent = formatTime(remainingTime);
+                timerElement.dataset.seconds = remainingTime;
+                if (remainingTime <= 0) {
+                    clearInterval(interval);
+                    fetch("/qtimerexpired", { method: "POST" }).finally(() => {
+                        window.location.href = "/checkanswer?timeout=1";
+                    });
+                }
+            }, 1000);
+        </script>
     {% endif %}
-    
-        <!-- Associated Image -->
-      <div class="absolute inset-0 -z-10 rounded-3xl overflow-hidden opacity-40">
-        {% if associatedImage %}
-        <img src=associatedImage alt="Swamp background" class="w-full h-full object-cover">
-        {% else %}
-        <img src="/static/swampbg.png" alt="Swamp background" class="w-full h-full object-cover">
-        {% endif %}
-      </div>
-
-      <!-- If there is an associated image, this is where it goes -->
-      {% if not associatedImage %}
-      <div class="flex justify-center items-end gap-12 mb-12">
-        <div class="image-container" style="width: 60%; height: auto; background-color: #374151;">
-          <img src="/static/swampbg.png" alt="Multiple Choice Robot" class="w-full h-full object-contain">
-        </div>
-      </div>
-      {% endif %}
-      <br><br>
-
-      <!-- Question Section -->
-      <div class="bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-md rounded-2xl p-8 border border-slate-700/50 shadow-2xl">
-        {% if questionText %}
-        <h2 class="mb-8 text-white text-center"> {{ questionText }} </h2>
-        {% else %}
-        <h2 class="mb-8 text-white text-center">Insert Question Here</h2>
-        {% endif %}
-
-
-
-
-        {% if robotType == 0 %}
-        <!-- Multiple Choice -->
-          {% if not feedback %}
-        <form action='/checkanswer' method="post">
-            <input type="hidden" name="answer" id="answer"> 
-
-          <div class="grid grid-cols-2 gap-4" style="justify-items: center;">
-            <button style="width: 45%; align-items: center; background-color:#4b5563;" type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-              <div class="flex items-start gap-4">
-                <div style="padding: 1px; margin: 1vh; align-items: center;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>A</strong></div>
-                <span id="optionA" class="flex-1 pt-1 text-white">
-                  {% if i1 %}
-                  {{ i1 }}
-                  {% else %}
-                  Blatantly Wrong Option
-                  {% endif %}
-                </span>
-              </div>
-            </button>
-            <button style="width: 45%; align-items: center; background-color:#4b5563;" type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionB').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-              <div class="flex gap-4 items-end">
-                <div style="padding: 1px; margin: 1vh; align-items: center;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50" style="background-color: #6a9c9e;"><strong>B</strong></div>
-                  <span id="optionB"  class="flex-1 pt-1 text-white">
-                    {% if i2 %}
-                    {{ i2 }}
-                    {% else %}
-                    Bad Grammar-y wording is
-                    {% endif %}
-                  </span>
-                </div>
-              </button>
-            <button style="width: 45%; align-items: center; background-color:#4b5563;" type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionC').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-              <div class="flex items-start gap-4">
-                <div style="padding: 1px; margin: 1vh; align-items: center;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>C</strong></div>
-                  <span id="optionC" class="flex-1 pt-1 text-white">
-                    {% if i3 %}
-                    {{ i3 }}
-                    {% else %}
-                    Always Right
-                    {% endif %}
-                  </span>
-                </div>
-              </button>
-            <button style="width: 45%; align-items: center; background-color:#4b5563;" type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionD').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-              <div class="flex items-end gap-4">
-                <div style="padding: 1px; margin: 1vh; align-items: center;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>D</strong></div>
-                  <span id="optionD" class="flex-1 pt-1 text-white" style="margin: 1px;">
-                    {% if i4 %}
-                    {{ i4 }}
-                    {% else %}
-                    Never Gonna Give You points for this
-                    {% endif %}
-                  </span>
-                </div>
-              </button>
-          </div>
-        </form>
-
-          {% else %}
-        <div class="grid grid-cols-2 gap-4" style="justify-items: center;">
-          <button id="buttonA" style="width: 45%; align-items: center;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex items-start gap-4">
-              <div style="padding: 1px; margin: 1vh;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>A</strong></div>
-              <span id="optionA" class="flex-1 pt-1 text-white">
-                {% if i1 %}
-                {{ i1 }}
-                {% else %}
-                Blatantly Wrong Option
-                {% endif %}
-              </span>
-            </div>
-          </button>
-          <button id="buttonB" style="width: 45%; align-items: center;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex gap-4 items-end">
-              <div style="padding: 1px; margin: 1vh;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50" style="background-color: #6a9c9e;"><strong>B</strong></div>
-                <span id="optionB"  class="flex-1 pt-1 text-white">
-                  {% if i2 %}
-                  {{ i2 }}
-                  {% else %}
-                  Bad Grammar-y wording is
-                  {% endif %}
-                </span>
-              </div>
-            </button>
-          <button id="buttonC" style="width: 45%; align-items: center;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex items-start gap-4">
-              <div style="padding: 1px; margin: 1vh;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>C</strong></div>
-                <span id="optionC" class="flex-1 pt-1 text-white">
-                  {% if i3 %}
-                  {{ i3 }}
-                  {% else %}
-                  Always Right
-                  {% endif %}
-                </span>
-              </div>
-            </button>
-          <button id="buttonD" style="width: 45%; align-items: center;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex items-end gap-4">
-              <div style="padding: 1px; margin: 1vh;" class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>D</strong></div>
-                <span id="optionD" class="flex-1 pt-1 text-white" style="margin: 1px;">
-                  {% if i4 %}
-                  {{ i4 }}
-                  {% else %}
-                  Never Gonna Give You points for this
-                  {% endif %}
-                </span>
-              </div>
-            </button>
-        </div>
-          {% endif %}
-          <script>
-            let correctAns = {{ correctAnswer }}
-            const optionAbutton = document.getElementById('.buttonA')
-            const optionBbutton = document.getElementById('.buttonB')
-            const optionCbutton = document.getElementById('.buttonC')
-            const optionDbutton = document.getElementById('.buttonD')
-            if (optionAbutton.textContent == correctAns) {
-              optionAbutton.style.backgroundColor = "lime";
-            } else {
-              optionAbutton.style.backgroundColor = "red";
-            }
-            if (optionBbutton.textContent == correctAns) {
-              optionBbutton.style.backgroundColor = "lime";
-            } else {
-              optionBbutton.style.backgroundColor = "red";
-            }
-            if (optionCbutton.textContent == correctAns) {
-              optionCbutton.style.backgroundColor = "lime";
-            } else {
-              optionCbutton.style.backgroundColor = "red";
-            }
-            if (optionDbutton.textContent == correctAns) {
-              optionDbutton.style.backgroundColor = "lime";
-            } else {
-              optionDbutton.style.backgroundColor = "red";
-            }
-          </script>
-
-        {% elif robotType == 1 %}
-
-        <!--robotType legend:
-        #0 = multiple choice
-        #1 = match
-        #2 = arrange
-        #3 = select all that apply
-        #4 = integer
-        #5 = string
-
-        for robotType 1, there will be two columns, one with the prompts and one with the answers, and lines will be drawn between them based on what the user selects. The user can only select one answer for each prompt, but not all answers need to be used. There will be a submit button at the bottom that submits the user's selections.
-        for robotType 2, there will be a list of items that the user can drag and drop to rearrange them in the correct order. There will be a submit button at the bottom that submits the user's arrangement.
-        for robotType 3, it will look similar to robotType 0, but instead of letters, there will be checkboxes next to each option, and the user can select multiple options and submit one form with all their selections.
-        for robotTypes 4 and 5, there will be a text input where the user can type their answer, and a submit button that submits their answer. For robotType 4, the input will only accept integers, and for robotType 5, it will accept strings (you can type anything).
-        -->
-
-        <!-- Match Prompts and Answers -->
-        <form action='/testanswer' method="post">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <h3 class="text-white">Prompts</h3>
-              <ul id="prompts" class="text-white">
-                {% for prompt in prompts %}
-                <li data-id="{{ loop.index }}">{{ prompt }}</li>
-                {% endfor %}
-              </ul>
-            </div>
-            <div>
-              <h3 class="text-white">Answers</h3>
-              <ul id="answers" class="text-white">
-                {% for answer in answers %}
-                <li data-id="{{ loop.index }}">{{ answer }}</li>
-                {% endfor %}
-              </ul>
-            </div>
-          </div>
-          <input type="hidden" name="matches" id="matches">
-          <button type="submit" class="mt-4 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Submit</button>
-        </form>
-        <script>
-          const matches = {};
-          document.querySelectorAll('#prompts li').forEach(prompt => {
-            prompt.addEventListener('click', () => {
-              const answer = prompt.nextElementSibling.querySelector('li.selected');
-              if (answer) {
-                matches[prompt.dataset.id] = answer.dataset.id;
-                document.getElementById('matches').value = JSON.stringify(matches);
-              }
-            });
-          });
-        </script>
-
-        {% elif robotType == 2 %}
-        <!-- Drag and Drop to Arrange -->
-        <form action='/testanswer' method="post">
-          <ul id="sortable" class="text-white">
-            {% for item in items %}
-            <li data-id="{{ loop.index }}" draggable="true">{{ item }}</li>
-            {% endfor %}
-          </ul>
-          <input type="hidden" name="order" id="order">
-          <button type="submit" class="mt-4 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Submit</button>
-        </form>
-        <script>
-          const sortable = document.getElementById('sortable');
-          sortable.addEventListener('dragstart', e => {
-            e.target.classList.add('dragging');
-          });
-          sortable.addEventListener('dragend', e => {
-            e.target.classList.remove('dragging');
-            const order = Array.from(sortable.children).map(item => item.dataset.id);
-            document.getElementById('order').value = JSON.stringify(order);
-          });
-        </script>
-
-        {% elif robotType == 3 %}
-        <!-- Select All That Apply -->
-        <form action='/testanswer' method="post">
-          <div class="grid grid-cols-2 gap-4">
-            {% for option in options %}
-            <label class="flex items-center gap-2">
-              <input type="checkbox" name="answers" value="{{ option }}">
-              <span class="text-white">{{ option }}</span>
-            </label>
-            {% endfor %}
-          </div>
-          <button type="submit" class="mt-4 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Submit</button>
-        </form>
-
-        {% elif robotType == 4 %}
-        <!-- Integer Input -->
-        <form action='/testanswer' method="post">
-          <label for="integerInput" class="text-white">Enter your answer:</label>
-          <input type="number" name="answer" id="integerInput" class="mt-2 p-2 rounded-lg">
-          <button type="submit" class="mt-4 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Submit</button>
-        </form>
-
-        {% elif robotType == 5 %}
-        <!-- String Input -->
-        <form action='/testanswer' method="post">
-          <label for="stringInput" class="text-white">Enter your answer:</label>
-          <input type="text" name="answer" id="stringInput" class="mt-2 p-2 rounded-lg">
-          <button type="submit" class="mt-4 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-lg">Submit</button>
-        </form>
-
-
-        {% else %}
-        <!-- Multiple Choice Again -->
-         The robot is here because it could not find any better friends to torment you with.
-        <form action='/testanswer' method="post">
-          <input type="hidden" name="answer" id="answer"> 
-
-        <div class="grid grid-cols-2 gap-4">
-          <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionA').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex items-start gap-4">
-              <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>A</strong></div>
-              <span id="optionA" class="flex-1 pt-1 text-white">
-                {% if i1 %}
-                {{ i1 }}
-                {% else %}
-                Blatantly Wrong Option
-                {% endif %}
-              </span>
-            </div>
-          </button>
-          <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionB').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50" style="background-color: #6a9c9e;"><strong>B</strong></div>
-                <span  id="optionB"  class="flex-1 pt-1 text-white">
-                  {% if i2 %}
-                  {{ i2 }}
-                  {% else %}
-                  Bad Grammar-y wording is
-                  {% endif %}
-                </span>
-              </div>
-            </button>
-          <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionC').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>C</strong></div>
-                <span  id="optionC" class="flex-1 pt-1 text-white">
-                  {% if i3 %}
-                  {{ i3 }}
-                  {% else %}
-                  Always Right
-                  {% endif %}
-                </span>
-              </div>
-            </button>
-          <button type="submit" onclick="document.getElementById('answer').value = document.getElementById('optionD').textContent;" class="p-5 rounded-xl border-2 transition-all duration-300 text-left bg-slate-800/60 border-slate-600">
-            <div class="flex items-start gap-4">
-                <div class="w-10 h-10 rounded-lg border-2 flex items-center justify-center flex-shrink-0 border-slate-500 text-slate-300 bg-slate-700/50"><strong>D</strong></div>
-                <span id="optionD" class="flex-1 pt-1 text-white">
-                  {% if i4 %}
-                  {{ i4 }}
-                  {% else %}
-                  Never Gonna Give You points for this
-                  {% endif %}
-                </span>
-              </div>
-            </button>
-        </div>
-      </form>
-        {% endif %}
-      </div>
-
-      <!-- Submit/Next Button -->
-      <div class="mt-8 flex justify-center">
-        
-        {% if feedback %}
-        <form action="/next_question">
-        <button type="submit" style="z-index: 999;" class="px-6 py-3 bg-slate-800/80 backdrop-blur-sm rounded-lg hover:bg-slate-700/80 transition-colors border border-slate-600 text-white">
-          Next Question
-        </button>
-        </form>
-        <!--
-        {!% else %}
-        <button style="z-index: 999;" onclick="fetch('/checkanswer').then(() => location.reload())" class="px-6 py-3 bg-slate-800/80 backdrop-blur-sm rounded-lg hover:bg-slate-700/80 transition-colors border border-slate-600 text-white">
-          Submit
-        </button>
-        -->
-        {% endif %}
-        
-      <!--The Robot-->
-      {% if feedback %}
-      <div class="image-container" style="position: fixed; bottom: 0; right: 0; width: auto; height: auto; float: right; background-color: #ffffff; padding: 2%; border-radius: 3rem 3rem 3rem 3rem; flex-direction: column; justify-content: flex-end; color:#2d2f3f">
-        {{ feedback }}
-      {% else %}
-
-      <div class="image-container" style="position: fixed; bottom: 0; right: 0; width: auto; height: auto; float: right; background-color: #ffffff; padding: 2%; border-radius: 3rem 3rem 3rem 3rem; flex-direction: column; justify-content: flex-end;">
-        {% if robotType == 0 %}
-        <img src="/static/botmultichoice.png" alt="Bot" class="w-full h-full object-contain" style="width: 20vh; height: auto; margin-top: auto; left: 0; right: 0; bottom: 0;">
-        {% elif robotType == 1 %}
-        <img src="/static/botmatch.png" alt="Bot" class="w-full h-full object-contain" style="width: 20vh; height: auto; margin-top: auto; left: 0; right: 0; bottom: 0;">
-        {% elif robotType == 2 %}
-        <img src="/static/botarrange.png" alt="Bot" class="w-full h-full object-contain" style="width: 20vh; height: auto; margin-top: auto; left: 0; right: 0; bottom: 0;">
-        {% elif robotType == 3 %}
-        <img src="/static/botselectapplying.png" alt="Bot" class="w-full h-full object-contain" style="width: 20vh; height: auto; margin-top: auto; left: 0; right: 0; bottom: 0;">
-        {% elif robotType == 4 %}
-        <img src="/static/botnumber.png" alt="Bot" class="w-full h-full object-contain" style="width: 20vh; height: auto; margin-top: auto; left: 0; right: 0; bottom: 0;">
-        {% elif robotType == 5 %}
-        <img src="/static/botstring.png" alt="Bot" class="w-full h-full object-contain" style="width: 20vh; height: auto; margin-top: auto; left: 0; right: 0; bottom: 0;">
-        {% else %}
-        <img src="/static/botmultichoice.png" alt="Bot" class="w-full h-full object-contain" style="width: 20vh; height: auto; margin-top: auto; left: 0; right: 0; bottom: 0;">
-        {% endif %}
-      </div>
-
-
-      {% endif %}
-      </div>
-    </div>
-  </div>
 </body>
 </html>
