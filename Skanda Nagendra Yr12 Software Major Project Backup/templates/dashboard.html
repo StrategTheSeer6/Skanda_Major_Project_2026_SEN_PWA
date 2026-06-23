@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
+    <title>SEN - Dashboard</title>
+</head>
+<body>
+    <div class="toolbar">
+        <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
+        <div id="toolbar_header">
+            <h1>Dashboard</h1>
+        </div>
+        <a id="login_button_link" href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
+    </div>
+
+    <main class="container" style="height: auto;">
+        <section class="profile">
+            <img src="{{ url_for('static', filename='swampsign.png') }}" alt="Profile Picture" class="profile-pic">
+            <h2>{{ username }}</h2>
+            <p>Access Level: {{ accesslevel }}</p>
+            {% if accesslevel == 'teacher' %}
+                <p>Teacher Code: <strong>{{ selfcode }}</strong></p>
+            {% endif %}
+        </section>
+
+        {% if accesslevel == 'teacher' %}
+            <section class="teacher-section">
+                <h3>Your Students</h3>
+                <p>Number of Students: {{ student_count }}</p>
+
+                {% if students %}
+                    <label for="student-dropdown">Select a Student:</label>
+                    <select id="student-dropdown" onchange="selectStudent(this.value)">
+                        <option value="">--Select--</option>
+                        {% for student in students %}
+                            <option value="{{ student.id }}">{{ student.username }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <form method="POST" action="/assign_course" style="margin-top: 1rem;">
+                        <input type="hidden" id="assign-student-id" name="student_id">
+                        <label for="subtopic">Assign Course:</label>
+                        <select id="subtopic" name="subtopic" required>
+                            {% for course in course_subtopics %}
+                                <option value="{{ course }}">{{ course }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit">Assign</button>
+                    </form>
+                    {% for student in students %}
+                    <ul>
+                        <li>{{ student.username }} {% if student.assigned_courses %} - Pending Courses:
+                            <ul>
+                                {% for course in student.assigned_courses %}
+                                    <li>{{ course }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% else %}
+                            - No courses currently assigned.
+                            {% endif %}
+                        </li>
+                    </ul>
+                    {% endfor %}
+
+                    <div id="student-scores" style="margin-top: 1rem;"></div>
+                {% else %}
+                    <p>You have no students.</p>
+                {% endif %}
+            </section>
+        {% elif accesslevel == 'student' %}
+            <section class="student-section">
+                <h3>Your Teacher</h3>
+                {% if teacher %}
+                    <p>Teacher: {{ teacher.username }}</p>
+                {% else %}
+                    <p>You do not have an assigned teacher.</p>
+                    <form method="POST" action="/assign_teacher">
+                        <label for="teacher-code">Enter Teacher Code:</label>
+                        <input type="text" id="teacher-code" name="teacher_code" required>
+                        <button type="submit">Submit</button>
+                    </form>
+                {% endif %}
+
+                {% if verified == 'true' %}
+                    <p>Teacher code verified.</p>
+                {% elif verified == 'false' %}
+                    <p>Teacher code verification failed.</p>
+                {% endif %}
+
+                <h3>Your Scores</h3>
+                {% if scores %}
+                    <ul>
+                        {% for score in scores %}
+                            <li>{{ score.subtopic or 'Unknown subtopic' }} quiz {{ score.quiznumber }}: {{ score.score }}/{{ score.totalmarks }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>You have no scores yet.</p>
+                {% endif %}
+
+                <h3>Assigned Courses</h3>
+                {% if assigned_courses %}
+                    <ul>
+                        {% for course in assigned_courses %}
+                            <li>{{ course }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>You have no assigned courses.</p>
+                {% endif %}
+            </section>
+        {% elif accesslevel == 'host' %}
+            <a href="/adminzone"><button>Add Question or Sign to Database</button></a>
+        {% endif %}
+    </main>
+
+    <script>
+        function selectStudent(studentId) {
+            document.getElementById("assign-student-id").value = studentId;
+            const scoresDiv = document.getElementById("student-scores");
+            if (!studentId) {
+                scoresDiv.innerHTML = "";
+                return;
+            }
+            fetch(`/get_student_scores?student_id=${studentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.scores.length) {
+                        scoresDiv.innerHTML = "<h4>Scores:</h4><p>This student has no scores yet.</p>";
+                        return;
+                    }
+                    scoresDiv.innerHTML = "<h4>Scores:</h4><ul>" +
+                        data.scores.map(score => `<li>${score.subtopic} quiz ${score.quiznumber}: ${score.score}/${score.totalmarks}</li>`).join("") +
+                        "</ul>";
+                });
+        }
+    </script>
+</body>
+</html>
