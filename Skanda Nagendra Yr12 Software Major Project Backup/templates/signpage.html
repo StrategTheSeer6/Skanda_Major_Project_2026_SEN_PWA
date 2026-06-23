@@ -6,231 +6,53 @@
     <meta name="theme-color" content="#ffffff">
     <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}" type="image/png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    {% if signtitle %}
-    <title> {{ signtitle }} </title>
-    {% else %}
-    <title>SEN - It's a Sign!</title>
-    {% endif %}
-
-    <style>
-        body {
-  margin: 0;
-  padding: 0;
-  overflow-x: scroll;
-}
-
-.app-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background-color: #3d3f52;
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  padding: 0;
-}
-
-/* how do i convert between rem and vh
-you can use the formula: 1rem = (viewport height in pixels) * (rem value / 100)
-1rem 
-*/
-
-.header-bar-wrapper {
-  width: 100%;
-  max-width: 1200px;
-  padding: 2rem 1rem 0 1rem;
-  position: relative;
-  z-index: 10;
-  transform: translateY(20vh);
-}
-
-.header-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.5rem 3rem;
-  background-color: #6a9c9e;
-  border-radius: 9999px;
-  border: 6px solid #3d3f52;
-  position: relative;
-}
-
-.header-text {
-  color: white;
-  font-style: italic;
-  font-family: Georgia, serif;
-  font-size: clamp(1.25rem, 4vw, 2rem);
-}
-
-.icon-circle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background-color: white;
-  border: 6px solid #3d3f52;
-  border-radius: 50%;
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sign-icon {
-  width: clamp(3rem, 8vw, 4rem);
-  height: clamp(3rem, 8vw, 4rem);
-  object-fit: contain;
-}
-
-.content-container {
-  width: 100%;
-  min-height: 100vh;
-  background-color: rgba(169, 178, 188, 0.85);
-  border: 8px solid #3d3f52;
-  border-radius: 3rem 3rem 0 0;
-  padding: 4rem 6rem 2rem 6rem;
-  margin-top: 12rem;
-  box-sizing: border-box;
-  overflow-y: auto;
-}
-
-.content-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 2rem;
-}
-
-.text-content {
-  flex: 1;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.image-container {
-  width: 200px;
-  flex-shrink: 0;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.side-image {
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-}
-
-h2 {
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  font-family: Georgia, serif;
-  color: #2d2f3f;
-  margin-bottom: 1rem;
-}
-
-p {
-  font-size: clamp(1rem, 2vw, 1.25rem);
-  font-family: Georgia, serif;
-  color: #2d2f3f;
-  line-height: 1.6;
-  white-space: pre-line;
-}
-
-@media (max-width: 768px) {
-  .header-bar {
-    padding: 1rem 2rem;
-  }
-
-  .header-bar-wrapper {
-    padding: 1rem 0.5rem 0 0.5rem;
-  }
-
-  .content-container {
-    padding: 3rem 2rem 1rem 2rem;
-  }
-
-  .content-inner {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .image-container {
-    width: 200vh;
-    height: 200vh;
-  }
-}
-
-    </style>
-    
+    <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
+    <title>{% if signtitle %}{{ signtitle }}{% else %}SEN - It's a Sign!{% endif %}</title>
 </head>
 <body>
-    <!-- This always appears at the top of every page. -->
     <div class="toolbar">
-        <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
-        <h1>Website Title!!</h1>
-        <a href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
-        <div style="width: 10%;"></div>
-    </div>
-    
-
-    <div class="content-container">
-        <div class="header-bar-wrapper">
-            <div class="header-bar">
-              <span class="header-text">It's a sign!</span>
-              <span class="header-text">
-                {% if signtitle %}
-                {{ signtitle }}
-                {% else %}
-                Title
-                {% endif %}
-              </span>
-              
-              <div class="icon-circle">
-                <img src="static/swampsign.png" alt="Sign" class="sign-icon" />
-              </div>
-            </div>
-          </div>
-    
-          <div class="content-container" style="background-image: 'static/swampbg.png'; border-radius: 3rem 3rem 3rem 3rem;">
-            <div class="content-inner">
-              <div class="text-content">
-                <p>
-                  {% if signtext %}
-                    {{ signtext | safe }}
-                  {% else %}
-                  With the possibility of some images on the side.
-                  {% endif %}
-                </p>
-              </div>
-              <div class="image-container">
-                {% if signimage %}
-                <img src="{{ signimage }}" />
-                {% else %}
-                <img src="static/swampbg.png" alt="Side decoration" class="side-image" />
-                {% endif %}
-              </div>
-            </div>
-            <a href="/next_question"><div class="toolbar_button" style="width: 100%;">
-              {% if buttonText %}
-              {{ buttonText }}
-              {% else %}
-              Continue
-              {% endif %}
-            </div></a>
-
-          </div>
-          </div>
+        <a href="{% if loggedin %}/loggedinhomepage{% else %}/{% endif %}"><div class="toolbar_button">Home</div></a>
+        <h1>SEN</h1>
+        <a href="{% if loggedin %}/logout{% else %}/login{% endif %}">
+            <div class="toolbar_button" id="login_button">{% if loggedin %}Log Out{% else %}Log In{% endif %}</div>
+        </a>
     </div>
 
+    <main class="page-shell">
+        <div class="swamp-header-wrapper">
+            <div class="swamp-header">
+                <span class="swamp-header-title">It's a sign!</span>
+                <div class="header-icon">
+                    <img src="{{ url_for('static', filename='swampsign.png') }}" alt="Sign">
+                </div>
+                <span class="swamp-header-title">{% if signtitle %}{{ signtitle }}{% else %}Title{% endif %}</span>
+            </div>
+        </div>
+
+        <section class="swamp-panel">
+            <div class="swamp-panel-inner">
+                <div class="copy-panel">
+                    {% if signtext %}
+                        {{ signtext | safe }}
+                    {% else %}
+                        <p>With the possibility of some images on the side.</p>
+                    {% endif %}
+                </div>
+                <div class="side-image-card">
+                    {% if signimage %}
+                        <img src="{{ signimage }}" alt="Sign illustration">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='swampbg.png') }}" alt="Swamp">
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="continue-row">
+                <a href="/next_question" class="button">
+                    {% if buttonText %}{{ buttonText }}{% else %}Continue{% endif %}
+                </a>
+            </div>
+        </section>
+    </main>
 </body>
 </html>
