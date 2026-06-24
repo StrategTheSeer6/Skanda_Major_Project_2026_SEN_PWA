@@ -23,12 +23,12 @@
             <img src="{{ url_for('static', filename='swampsign.png') }}" alt="Profile Picture" class="profile-pic">
             <h2>{{ username }}</h2>
             <p>Access Level: {{ accesslevel }}</p>
-            {% if accesslevel == 'teacher' %}
+            {% if accesslevel == 'teacher' or accesslevel == 'host' %}
                 <p>Teacher Code: <strong>{{ selfcode }}</strong></p>
             {% endif %}
         </section>
 
-        {% if accesslevel == 'teacher' %}
+        {% if accesslevel == 'teacher' or accesslevel == 'host' %}
             <section class="teacher-section">
                 <h3>Your Students</h3>
                 <p>Number of Students: {{ student_count }}</p>
@@ -114,7 +114,9 @@
                     <p>You have no assigned courses.</p>
                 {% endif %}
             </section>
-        {% elif accesslevel == 'host' %}
+        {% endif %}
+
+        {% if accesslevel == 'host' %}
             <a href="/adminzone"><button>Add Question or Sign to Database</button></a>
         {% endif %}
     </main>
