@@ -1869,12 +1869,12 @@ def add_q_to_db():
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (subtopic, info, question, image, robotType, answer, i1, i2, i3, i4, answermethod, difficulty))
                 conn.commit()
-                return jsonify({"status": "success", "message": "Question added successfully!"})
+                return render_template('adminzone.html', error="Question added successfully!")
             else:
-                return jsonify({"status": "error", "message": "Admin password incorrect!"})
+                return render_template('adminzone.html', error="Authentication failed. Please try again.")
         except Exception as e:
             print(f"Error adding question: {e}")
-            return jsonify({"status": "error", "message": "An error occurred while adding the question."})
+            return render_template('adminzone.html', error="Error adding question. Please try again later.")
         finally:
             conn.close()
     return redirect(url_for('loggedinhomepage'))
@@ -1898,12 +1898,12 @@ def add_s_to_db():
                     VALUES (?, ?, ?)
                 ''', (title, text, image))
                 conn.commit()
-                return jsonify({"status": "success", "message": "Sign added successfully!"})
+                return render_template('adminzone.html', error="Sign added successfully!")
             else:
-                return jsonify({"status": "error", "message": "Admin password incorrect!"})
+                return render_template('adminzone.html', error="Authentication failed. Please try again.")
         except Exception as e:
             print(f"Error adding sign: {e}")
-            return jsonify({"status": "error", "message": "An error occurred while adding the sign."})
+            return render_template('adminzone.html', error="Error adding sign. Please try again later.")
         finally:
             conn.close()
     return redirect(url_for('loggedinhomepage'))
