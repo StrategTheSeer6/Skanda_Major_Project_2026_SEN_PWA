@@ -15,7 +15,7 @@
 <body>
     <!-- This always appears at the top of every page. -->
     <div class="toolbar">
-        <a href="/"><div class="toolbar_button">Home</div></a>
+        <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
         <h1>SEN - Add Sign or Question</h1>
         <a href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
     </div>
@@ -28,27 +28,29 @@
           {{ error }}
         </div>
         {% endif %}
-        
+
         <div class="toggle-container">
             <button id="addQuestionBtn">Add Question</button>
             <button id="addSignBtn">Add Sign</button>
         </div>
-
+        <br><br>
         <div id="addQuestionForm" class="form-container" style="display: none;">
+            <p>['*' means this field is required]</p>
+            <br><br>
             <form action="/add_q_to_db" method="post">
-                <label for="subtopic">Subtopic:</label><br>
+                <label for="subtopic">Subtopic *:</label><br>
                 <input type="text" id="subtopic" name="subtopic" required><br>
 
                 <label for="info">Info:</label><br>
                 <textarea id="info" name="info"></textarea><br>
 
-                <label for="question">Question:</label><br>
+                <label for="question">Question *:</label><br>
                 <textarea id="question" name="question" required></textarea><br>
 
                 <label for="image">Image:</label><br>
                 <input type="text" id="image" name="image"><br>
 
-                <label for="robotType">Robot Type (0-5):</label><br>
+                <label for="robotType">Robot Type (0-5) *:</label><br>
                 <input type="number" id="robotType" name="robotType" min="0" max="5" required><br>
 
                 <label for="answer">Answer:</label><br>
@@ -69,10 +71,10 @@
                 <label for="answermethod">Answer Method:</label><br>
                 <input type="text" id="answermethod" name="answermethod"><br>
 
-                <label for="difficulty">Difficulty:</label><br>
+                <label for="difficulty">Difficulty *:</label><br>
                 <input type="text" id="difficulty" name="difficulty" required><br>
 
-                <label for="adminconfirm">Admin Confirm:</label><br>
+                <label for="adminconfirm">Admin Confirm *:</label><br>
                 <input type="text" id="adminconfirm" name="adminconfirm" required><br><br>
 
                 <input type="submit" value="Add Question">
@@ -80,17 +82,19 @@
         </div>
 
         <div id="addSignForm" class="form-container" style="display: none;">
+            <p>['*' means this field is required]</p>
+            <br><br>
             <form action="/add_s_to_db" method="post">
-                <label for="title">Title:</label><br>
+                <label for="title">Title *:</label><br>
                 <input type="text" id="title" name="title" required><br>
 
-                <label for="text">Text:</label><br>
+                <label for="text">Text *:</label><br>
                 <textarea id="text" name="text" required></textarea><br>
 
                 <label for="image">Image:</label><br>
                 <input type="text" id="image" name="image"><br>
 
-                <label for="adminconfirm">Admin Confirm:</label><br>
+                <label for="adminconfirm">Admin Confirm *:</label><br>
                 <input type="text" id="adminconfirm" name="adminconfirm" required><br><br>
 
                 <input type="submit" value="Add Sign">
