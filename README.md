@@ -10,6 +10,8 @@ Note that when setting up the code in VSC or whichever IDE is being used, there 
 
 If you are using a Mac device, you will have to go to system settings and disable AirPlay Receiver, because this occupies the same port (5000) that the app runs on. Once you are finished with using the app, however, you may turn it back on.
 
+When starting the app for the first time, it is recommended that you use the purge_db() function right before the init_db() by adding a line and nesting the function right below the if statement in the if __name__ == "__main__" statement. Then, for future uses, remove the function. This will ensure there is no other data existing in the database beforehand.
+
 ## How to use the app itself
 Navigate within the IDE to app.py and press the run button. Click on the final URL by control-clicking (command for mac) on the http address links. As a new user with no account, you can take a demo test, and sign in. Signing in provides a more personalised experience for teachers and students. The latter of which can link their account to a teacher, allowing the teacher to see their students' scores on quizzes they may assign to the students.
 
