@@ -7,68 +7,69 @@
     <link rel="manifest" type="application/json" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" type="image/png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    
     <title>SEN - Home</title>
 </head>
 <body>
-    <div class="toolbar" style="display: flex; flex-direction: row; align-items: center; justify-content: space-around;">
-        <a href="/loggedinhomepage"><div class="toolbar_button" style="width: 100%;">Home</div></a>
+    <div class="toolbar">
+        <a href="/loggedinhomepage"><div class="toolbar_button">Home</div></a>
         <div id="toolbar_header">
-            <div style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                {% if username %}
-                <h1> Welcome, {{ username }}! </h1>
+            {% if username %}
+                <h1>Welcome, {{ username }}!</h1>
+            {% else %}
+                <h1>Welcome to SEN!</h1>
+            {% endif %}
+        </div>
+        <a id="login_button_link" href="/logout"><div class="toolbar_button" id="login_button">Log Out</div></a>
+    </div>
+
+    <main class="container" style="display: flex; flex-direction: column; gap: 1.5rem; height: auto;">
+        <section>
+            <h1>Welcome</h1>
+            <p>Choose a course or check your dashboard.</p>
+            <a href="/dashboard"><button>Open Dashboard</button></a>
+        </section>
+
+        <section>
+            <h2>Available Courses</h2>
+            <form action="/preparation" method="post">
+                <label for="subtopic">Select a Module/Test/Course:</label>
+                <select id="subtopic" name="subtopic">
+                    {% for course in course_subtopics %}
+                        <option value="{{ course }}">{{ course }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Prepare</button>
+            </form>
+        </section>
+
+        {% if accesslevel == 'student' %}
+        <a href="https://docs.google.com/document/d/1qBbUAsAwJHsAXXqZUSM4edGKkSjjxjTsrPPyYMSTk1I/edit?tab=t.0"><button>Need help making study notes? You can access the Software Engineering curriculum here!</button></a>    
+        <section>
+                <h2>Assigned Courses</h2>
+                {% if assigned_courses %}
+                    <ul>
+                        {% for course in assigned_courses %}
+                            <li>
+                                <form action="/start_test" method="post">
+                                    <input type="hidden" name="subtopic" value="{{ course }}">
+                                    <span>{{ course }}</span>
+                                    <button type="submit">Start</button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
                 {% else %}
-                <h1>Website Title!!</h1>
+                    <p>You have no assigned courses.</p>
                 {% endif %}
-            </div>
-        </div>
-        <a id="login_button_link" href="/logout"><div class="toolbar_button" id="login_button" style="width: 100%;">Log Out</div></a>
-
-    </div>
-    
-    <!-- Main Content -->
-    <div class="container" style="display: flex; flex-direction: column; width: 90%; height: 100%; margin: auto; align-items: safe;">
-        <div class="container" style="width: 100%; height: 100%; background-size: cover; margin-top: 16vh;">
-        <h1>Welcome I guess</h1>
-        <p>There is not much done... I don't know what to do...</p>
-        <button onclick="alert('Nothing happened...')">Click for nothing to happen</button>
-        <a href="/preparation"><button>Click for nothing to happen</button></a>
-        </div>
-
-    <!-- Navigation Menu -->
-    <div class="container" style="width: 100%; height: 100%; background-size: cover; background-color: rgba(99, 127, 118, 0.85);">
-        <h2>Navigation Menu</h2>
-        <label for="modules">Select a Module/Test/Course:</label>
-        <select id="modules" onchange="navigateToPreparationPage()">
-            <option value="" disabled selected>Select an option</option>
-            <option value="sd_phases">SD Phases</option>
-            <option value="algorithmic_thinking">Algorithmic Thinking</option>
-        </select>
-    </div>
-
-    <!-- Assigned Items -->
-    <div class="container" style="width: 100%; height: 100%; background-size: cover;">
-        <h2>Assigned Items</h2>
-        <div class="assigned-item">
-            <p>Assignment 1: SD Phases</p>
-            <a href="/preparation"><button>Go to Preparation</button></a>
-        </div>
-        <div class="assigned-item">
-            <p>Assignment 2: Algorithmic Thinking</p>
-            <a href="/preparation"><button>Go to Preparation</button></a>
-        </div>
-    </div>
-
-    <script>
-        function navigateToPreparationPage() {
-            const dropdown = document.getElementById('modules');
-            const selectedValue = dropdown.value;
-            if (selectedValue) {
-                window.location.href = '/preparation'; // This URL will be changed eventually.
-            }
-        }
-    </script>
-    </div>
+            </section>
+        {% elif accesslevel == 'teacher' %}
+        <a href="https://docs.google.com/document/d/1qBbUAsAwJHsAXXqZUSM4edGKkSjjxjTsrPPyYMSTk1I/edit?tab=t.0"><button>You can access the Software Engineering curriculum here.</button></a>
+        {% elif accesslevel == 'host' %}
+        <a href="https://docs.google.com/document/d/1qBbUAsAwJHsAXXqZUSM4edGKkSjjxjTsrPPyYMSTk1I/edit?tab=t.0"><button>Software Engineering Curriculum</button></a>
+            <section>
+                <a href="/adminzone"><button>Add New Question or Sign to Question/Sign Bank</button></a>
+            </section>
+        {% endif %}
+    </main>
 </body>
 </html>
