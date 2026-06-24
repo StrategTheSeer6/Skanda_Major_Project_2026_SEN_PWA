@@ -17,9 +17,8 @@
     <!-- This always appears at the top of every page. -->
     <div class="toolbar">
         <a href="/"><div class="toolbar_button">Home</div></a>
-        <h1>Website Title!!</h1>
+        <h1>SEN - Log In</h1>
         <a href="/login"><div class="toolbar_button" id="login_button">Log In</div></a>
-        <div style="width: 10%;"></div>
     </div>
     
     <div class="container">
@@ -63,49 +62,7 @@
             <input type="text" id="username" name="username"><br>
             <label for="password">Password:</label><br>
             <input type="password" id="password" name="password"><br><br>
-            <label for="signup">Don't have an account? <a href="/register">Sign Up.</a></label><br><br>
-            <input type="submit" value="Login">
-        </form>
-
-        {% endif %}
-
-
-    </div>
-
-</body>
-</html>            Too many failed login attempts. Please wait {{ loginTimeout }} seconds before trying again.
-        </div>
-
-        {% else %}
-
-        <form action="/login" method="post" incorrectAttempts = "{{ incorrectAttempts }}">
-
-            <label for="username">Username:</label><br>
-            <input type="text" id="username" name="username"><br>
-            <label for="password">Password:</label><br>
-            <input type="password" id="password" name="password"><br><br>
-            <label for="signup">Don't have an account? <a href="/register">Sign Up.</a></label><br><br>
-            <input type="submit" value="Login">
-        </form>
-
-        {% endif %}
-
-
-    </div>
-
-</body>
-</html>            Too many failed login attempts. Please wait {{ loginTimeout }} seconds before trying again.
-        </div>
-
-        {% else %}
-
-        <form action="/login" method="post" incorrectAttempts = "{{ incorrectAttempts }}">
-
-            <label for="username">Username:</label><br>
-            <input type="text" id="username" name="username"><br>
-            <label for="password">Password:</label><br>
-            <input type="password" id="password" name="password"><br><br>
-            <label for="signup">Don't have an account? <a href="/register">Sign Up.</a></label><br><br>
+            <label for="signup">Don't have an account? <a href="/register" style="color: #0033ff; text-decoration: underline;">Sign Up.</a></label><br><br>
             <input type="submit" value="Login">
         </form>
 
