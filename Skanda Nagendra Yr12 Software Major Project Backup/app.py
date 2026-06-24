@@ -188,18 +188,30 @@ def createDummyUser():
     cursor = conn.cursor()
     dummy_password = bcrypt.hashpw("examplepassword123!".encode(), bcrypt.gensalt()).decode()
     teacher1code = generate_unique_teacher_code(cursor)
+    teacher2code = generate_unique_teacher_code(cursor)
     data1 = ("exampleuser1", dummy_password, "example.user@det.nsw.edu.au", "teacher", teacher1code)
     data2 = ("exampleuser2", dummy_password, "example.user2@education.nsw.gov.au", "student", teacher1code)
+    data3 = ("dummyhost", dummy_password, "host@det.nsw.edu.au", "host", teacher2code)
     try:
         existingid = cursor.execute('SELECT id FROM User WHERE email = ?', (data1[2],)).fetchone()
         if existingid:
             ensure_teacher_selfcodes(cursor)
             print("Dummy user already exists, no need to create.")
-            return
         else:
             cursor.execute('INSERT INTO User(username, password, email, accesslevel, selfcode) VALUES (?, ?, ?, ?, ?)', data1)
+        existingid = cursor.execute('SELECT id FROM User WHERE email = ?', (data2[2],)).fetchone()
+        if existingid:
+            ensure_teacher_selfcodes(cursor)
+            print("Dummy user already exists, no need to create.")
+        else:
             cursor.execute('INSERT INTO User(username, password, email, accesslevel, teachercode) VALUES (?, ?, ?, ?, ?)', data2)
-            return
+        existingid = cursor.execute('SELECT id FROM User WHERE email = ?', (data3[2],)).fetchone()
+        if existingid:
+            ensure_teacher_selfcodes(cursor)
+            print("Dummy user already exists, no need to create.")
+        else:
+            cursor.execute('INSERT INTO User(username, password, email, accesslevel, selfcode) VALUES (?, ?, ?, ?, ?)', data3)
+        return
     except sqlite3.Error as e:
         print(f"Database error {e}. Could not add dummy users.")
     finally:
@@ -1756,7 +1768,7 @@ def dashboard():
 
         username, accesslevel, teachercode, selfcode = user
 
-        if accesslevel == 'teacher':
+        if accesslevel == 'teacher' or accesslevel == 'host':
             students = [
                 {
                     "id": row[0],
@@ -1802,7 +1814,8 @@ def dashboard():
                 verified=request.args.get('verified'),
                 course_subtopics=COURSE_SUBTOPICS
             )
-
+        else:
+            return redirect(url_for('loggedinhomepage'))
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         return redirect(url_for('home'))
